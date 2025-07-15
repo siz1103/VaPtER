@@ -1,0 +1,181 @@
+[
+  {
+    "model": "orchestrator_api.portlist",
+    "pk": 1,
+    "fields": {
+      "name": "All IANA assigned TCP",
+      "tcp_ports": "1-65535",
+      "udp_ports": null,
+      "description": "All TCP ports (1-65535) as defined by IANA",
+      "created_at": "2025-01-01T10:00:00Z",
+      "updated_at": "2025-01-01T10:00:00Z",
+      "deleted_at": null
+    }
+  },
+  {
+    "model": "orchestrator_api.portlist",
+    "pk": 2,
+    "fields": {
+      "name": "All IANA assigned TCP and UDP",
+      "tcp_ports": "1-65535",
+      "udp_ports": "1-65535",
+      "description": "All TCP and UDP ports (1-65535) as defined by IANA",
+      "created_at": "2025-01-01T10:00:00Z",
+      "updated_at": "2025-01-01T10:00:00Z",
+      "deleted_at": null
+    }
+  },
+  {
+    "model": "orchestrator_api.portlist",
+    "pk": 3,
+    "fields": {
+      "name": "All TCP and Nmap top 100 UDP",
+      "tcp_ports": "1-65535",
+      "udp_ports": "7,9,13,21-23,37,42,53,67-69,80,88,106,111,113,119,135,139,158,161-162,177,427,443,497,500,514-515,518,520,593,623,626,631,996-999,1022-1023,1025-1030,1433-1434,1645-1646,1701,1718-1719,1812-1813,1900,2000,2048-2049,2222-2223,2746,3283,3456,3703,4444,4500,5000,5060,5093,5351,5353,5355,5500,5632,9200,10000,17185,20031,30718,31337,32768-32769,32771,32815,33281,49152-49154,49156,49181-49182,49186,49188,49190-49194,49200-49201,65024",
+      "description": "All TCP ports and Nmap's top 100 most common UDP ports",
+      "created_at": "2025-01-01T10:00:00Z",
+      "updated_at": "2025-01-01T10:00:00Z",
+      "deleted_at": null
+    }
+  },
+  {
+    "model": "orchestrator_api.portlist",
+    "pk": 4,
+    "fields": {
+      "name": "Common TCP Ports",
+      "tcp_ports": "21,22,23,25,53,80,110,143,443,993,995,1433,3306,3389,5432,8080,8443",
+      "udp_ports": null,
+      "description": "Most commonly used TCP ports for basic scanning",
+      "created_at": "2025-01-01T10:00:00Z",
+      "updated_at": "2025-01-01T10:00:00Z",
+      "deleted_at": null
+    }
+  },
+  {
+    "model": "orchestrator_api.portlist",
+    "pk": 5,
+    "fields": {
+      "name": "Common UDP Ports",
+      "tcp_ports": null,
+      "udp_ports": "53,67,68,69,123,161,162,500,514,1194,4500",
+      "description": "Most commonly used UDP ports for basic scanning",
+      "created_at": "2025-01-01T10:00:00Z",
+      "updated_at": "2025-01-01T10:00:00Z",
+      "deleted_at": null
+    }
+  },
+  {
+    "model": "orchestrator_api.scantype",
+    "pk": 1,
+    "fields": {
+      "name": "Discovery",
+      "only_discovery": true,
+      "consider_alive": false,
+      "be_quiet": true,
+      "port_list": null,
+      "plugin_finger": false,
+      "plugin_enum": false,
+      "plugin_web": false,
+      "plugin_vuln_lookup": false,
+      "description": "Quick discovery scan to check if target is alive (ping scan only)",
+      "created_at": "2025-01-01T10:00:00Z",
+      "updated_at": "2025-01-01T10:00:00Z",
+      "deleted_at": null
+    }
+  },
+  {
+    "model": "orchestrator_api.scantype",
+    "pk": 2,
+    "fields": {
+      "name": "Scan Base",
+      "only_discovery": false,
+      "consider_alive": false,
+      "be_quiet": false,
+      "port_list": 2,
+      "plugin_finger": false,
+      "plugin_enum": false,
+      "plugin_web": false,
+      "plugin_vuln_lookup": false,
+      "description": "Basic port scan using all IANA assigned TCP and UDP ports",
+      "created_at": "2025-01-01T10:00:00Z",
+      "updated_at": "2025-01-01T10:00:00Z",
+      "deleted_at": null
+    }
+  },
+  {
+    "model": "orchestrator_api.scantype",
+    "pk": 3,
+    "fields": {
+      "name": "Scan Completo",
+      "only_discovery": false,
+      "consider_alive": false,
+      "be_quiet": false,
+      "port_list": 3,
+      "plugin_finger": true,
+      "plugin_enum": true,
+      "plugin_web": false,
+      "plugin_vuln_lookup": true,
+      "description": "Complete scan with fingerprinting, enumeration, and vulnerability lookup using all TCP and top 100 UDP ports",
+      "created_at": "2025-01-01T10:00:00Z",
+      "updated_at": "2025-01-01T10:00:00Z",
+      "deleted_at": null
+    }
+  },
+  {
+    "model": "orchestrator_api.scantype",
+    "pk": 4,
+    "fields": {
+      "name": "Web Application Scan",
+      "only_discovery": false,
+      "consider_alive": false,
+      "be_quiet": false,
+      "port_list": 4,
+      "plugin_finger": false,
+      "plugin_enum": false,
+      "plugin_web": true,
+      "plugin_vuln_lookup": true,
+      "description": "Focused scan for web applications with web-specific enumeration and vulnerability detection",
+      "created_at": "2025-01-01T10:00:00Z",
+      "updated_at": "2025-01-01T10:00:00Z",
+      "deleted_at": null
+    }
+  },
+  {
+    "model": "orchestrator_api.scantype",
+    "pk": 5,
+    "fields": {
+      "name": "Quick Scan",
+      "only_discovery": false,
+      "consider_alive": true,
+      "be_quiet": true,
+      "port_list": 4,
+      "plugin_finger": false,
+      "plugin_enum": false,
+      "plugin_web": false,
+      "plugin_vuln_lookup": false,
+      "description": "Quick scan of common TCP ports, assuming all hosts are alive",
+      "created_at": "2025-01-01T10:00:00Z",
+      "updated_at": "2025-01-01T10:00:00Z",
+      "deleted_at": null
+    }
+  },
+  {
+    "model": "orchestrator_api.scantype",
+    "pk": 6,
+    "fields": {
+      "name": "Stealth Scan",
+      "only_discovery": false,
+      "consider_alive": false,
+      "be_quiet": true,
+      "port_list": 4,
+      "plugin_finger": true,
+      "plugin_enum": false,
+      "plugin_web": false,
+      "plugin_vuln_lookup": false,
+      "description": "Quiet scan with minimal noise, including basic fingerprinting",
+      "created_at": "2025-01-01T10:00:00Z",
+      "updated_at": "2025-01-01T10:00:00Z",
+      "deleted_at": null
+    }
+  }
+]
