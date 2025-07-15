@@ -1,3 +1,5 @@
+# backend/requirements.txt
+
 # Django and REST Framework
 Django==5.0.1
 djangorestframework==3.14.0
@@ -17,18 +19,10 @@ httpx==0.26.0
 
 # Utilities
 python-decouple==3.8
-celery==5.3.4
-redis==5.0.1
 
 # Development and debugging
 django-extensions==3.2.3
 ipython==8.18.1
 
-# Validation and serialization
-marshmallow==3.20.2
-
-# Pagination
-django-rest-framework-pagination==0.1.1
-
-# Documentation (optional)
+# Documentation
 drf-spectacular==0.27.0
