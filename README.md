@@ -1,2 +1,0 @@
-# VaPtER
-Scanner Vulnerability assessment
