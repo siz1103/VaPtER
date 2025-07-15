@@ -350,16 +350,16 @@ docker-compose exec backend python manage.py loaddata initial_data.json
 
 ## ✅ Checklist Test Completo
 
-- [ ] Servizi Docker tutti avviati
-- [ ] Django Admin accessibile
-- [ ] Dati iniziali caricati (Port Lists e Scan Types)
-- [ ] API CRUD Customers funzionante
-- [ ] API CRUD Targets funzionante
-- [ ] API Scansioni funzionante
-- [ ] Validazioni funzionanti
-- [ ] RabbitMQ accessibile e consumer attivo
-- [ ] Filtri e ricerca funzionanti
-- [ ] Documentazione API accessibile
-- [ ] Test di performance base superati
+- [X] Servizi Docker tutti avviati
+- [X] Django Admin accessibile
+- [X] Dati iniziali caricati (Port Lists e Scan Types)
+- [X] API CRUD Customers funzionante
+- [X] API CRUD Targets funzionante
+- [X] API Scansioni funzionante
+- [X] Validazioni funzionanti
+- [X] RabbitMQ accessibile e consumer attivo
+- [X] Filtri e ricerca funzionanti
+- [X] Documentazione API accessibile
+- [X] Test di performance base superati
 
 Una volta completata questa checklist, il backend è pronto per l'integrazione con l'API Gateway e i moduli scanner.

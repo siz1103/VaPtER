@@ -1,3 +1,5 @@
+# backend/orchestrator_api/admin.py
+
 from django.contrib import admin
 from django.utils.html import format_html
 from django.urls import reverse
@@ -228,7 +230,12 @@ class ScanAdmin(admin.ModelAdmin):
     list_display = ['id', 'target_info', 'scan_type', 'status_colored', 'duration_display', 'initiated_at']
     list_filter = ['status', 'scan_type', 'target__customer', 'initiated_at']
     search_fields = ['target__name', 'target__address', 'target__customer__name']
-    readonly_fields = ['initiated_at', 'created_at', 'updated_at', 'deleted_at', 'duration_display']
+    readonly_fields = [
+        'initiated_at', 'created_at', 'updated_at', 'deleted_at', 'duration_display',
+        'parsed_nmap_results_formatted', 'parsed_finger_results_formatted', 
+        'parsed_enum_results_formatted', 'parsed_web_results_formatted', 
+        'parsed_vuln_results_formatted'
+    ]
     
     fieldsets = (
         ('Basic Information', {
@@ -238,6 +245,12 @@ class ScanAdmin(admin.ModelAdmin):
             'fields': ('initiated_at', 'started_at', 'completed_at', 'duration_display')
         }),
         ('Results', {
+            'fields': ('parsed_nmap_results', 'parsed_finger_results', 
+                      'parsed_enum_results', 'parsed_web_results', 
+                      'parsed_vuln_results'),
+            'classes': ('collapse',)
+        }),
+        ('Formatted Results (Read Only)', {
             'fields': ('parsed_nmap_results_formatted', 'parsed_finger_results_formatted', 
                       'parsed_enum_results_formatted', 'parsed_web_results_formatted', 
                       'parsed_vuln_results_formatted'),
@@ -290,37 +303,37 @@ class ScanAdmin(admin.ModelAdmin):
     def parsed_nmap_results_formatted(self, obj):
         """Display formatted nmap results"""
         if obj.parsed_nmap_results:
-            return mark_safe(f'<pre>{json.dumps(obj.parsed_nmap_results, indent=2)}</pre>')
+            return mark_safe(f'<pre style="white-space: pre-wrap; max-height: 300px; overflow-y: auto;">{json.dumps(obj.parsed_nmap_results, indent=2)}</pre>')
         return '-'
-    parsed_nmap_results_formatted.short_description = 'Nmap Results'
+    parsed_nmap_results_formatted.short_description = 'Nmap Results (Formatted)'
     
     def parsed_finger_results_formatted(self, obj):
         """Display formatted fingerprint results"""
         if obj.parsed_finger_results:
-            return mark_safe(f'<pre>{json.dumps(obj.parsed_finger_results, indent=2)}</pre>')
+            return mark_safe(f'<pre style="white-space: pre-wrap; max-height: 300px; overflow-y: auto;">{json.dumps(obj.parsed_finger_results, indent=2)}</pre>')
         return '-'
-    parsed_finger_results_formatted.short_description = 'Fingerprint Results'
+    parsed_finger_results_formatted.short_description = 'Fingerprint Results (Formatted)'
     
     def parsed_enum_results_formatted(self, obj):
         """Display formatted enum results"""
         if obj.parsed_enum_results:
-            return mark_safe(f'<pre>{json.dumps(obj.parsed_enum_results, indent=2)}</pre>')
+            return mark_safe(f'<pre style="white-space: pre-wrap; max-height: 300px; overflow-y: auto;">{json.dumps(obj.parsed_enum_results, indent=2)}</pre>')
         return '-'
-    parsed_enum_results_formatted.short_description = 'Enum Results'
+    parsed_enum_results_formatted.short_description = 'Enum Results (Formatted)'
     
     def parsed_web_results_formatted(self, obj):
         """Display formatted web results"""
         if obj.parsed_web_results:
-            return mark_safe(f'<pre>{json.dumps(obj.parsed_web_results, indent=2)}</pre>')
+            return mark_safe(f'<pre style="white-space: pre-wrap; max-height: 300px; overflow-y: auto;">{json.dumps(obj.parsed_web_results, indent=2)}</pre>')
         return '-'
-    parsed_web_results_formatted.short_description = 'Web Results'
+    parsed_web_results_formatted.short_description = 'Web Results (Formatted)'
     
     def parsed_vuln_results_formatted(self, obj):
         """Display formatted vulnerability results"""
         if obj.parsed_vuln_results:
-            return mark_safe(f'<pre>{json.dumps(obj.parsed_vuln_results, indent=2)}</pre>')
+            return mark_safe(f'<pre style="white-space: pre-wrap; max-height: 300px; overflow-y: auto;">{json.dumps(obj.parsed_vuln_results, indent=2)}</pre>')
         return '-'
-    parsed_vuln_results_formatted.short_description = 'Vulnerability Results'
+    parsed_vuln_results_formatted.short_description = 'Vulnerability Results (Formatted)'
 
 
 @admin.register(ScanDetail)
@@ -330,13 +343,20 @@ class ScanDetailAdmin(admin.ModelAdmin):
     list_display = ['scan_id', 'scan_target', 'scan_status', 'nmap_duration', 'created_at']
     list_filter = ['created_at', 'updated_at']
     search_fields = ['scan__target__name', 'scan__target__address']
-    readonly_fields = ['created_at', 'updated_at', 'deleted_at']
+    readonly_fields = [
+        'created_at', 'updated_at', 'deleted_at', 
+        'open_ports_formatted', 'os_guess_formatted'
+    ]
     
     fieldsets = (
         ('Scan Information', {
             'fields': ('scan',)
         }),
-        ('Parsed Results', {
+        ('Raw Results', {
+            'fields': ('open_ports', 'os_guess'),
+            'classes': ('collapse',)
+        }),
+        ('Formatted Results (Read Only)', {
             'fields': ('open_ports_formatted', 'os_guess_formatted'),
             'classes': ('collapse',)
         }),
@@ -384,16 +404,16 @@ class ScanDetailAdmin(admin.ModelAdmin):
     def open_ports_formatted(self, obj):
         """Display formatted open ports"""
         if obj.open_ports:
-            return mark_safe(f'<pre>{json.dumps(obj.open_ports, indent=2)}</pre>')
+            return mark_safe(f'<pre style="white-space: pre-wrap; max-height: 300px; overflow-y: auto;">{json.dumps(obj.open_ports, indent=2)}</pre>')
         return '-'
-    open_ports_formatted.short_description = 'Open Ports'
+    open_ports_formatted.short_description = 'Open Ports (Formatted)'
     
     def os_guess_formatted(self, obj):
         """Display formatted OS guess"""
         if obj.os_guess:
-            return mark_safe(f'<pre>{json.dumps(obj.os_guess, indent=2)}</pre>')
+            return mark_safe(f'<pre style="white-space: pre-wrap; max-height: 300px; overflow-y: auto;">{json.dumps(obj.os_guess, indent=2)}</pre>')
         return '-'
-    os_guess_formatted.short_description = 'OS Detection'
+    os_guess_formatted.short_description = 'OS Detection (Formatted)'
 
 
 # Customize admin site
