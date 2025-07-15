@@ -2,13 +2,14 @@
 
 Per procedere con lo sviluppo un componente alla volta, si suggerisce il seguente ordine:
 
-### **Fase 1: Fondamenta e Gestione Asset **
+### **Fase 1: Fondamenta e Gestione Target **
 
-L'obiettivo è avere una base dati e un'interfaccia utente minima per gestire gli asset e predisporre l'avvio  delle scansioni.
+L'obiettivo è avere una base dati e un'interfaccia utente minima per gestire i target e predisporre l'avvio  delle scansioni.
 
 1. **Database (PostgreSQL):**
 
 - Definire lo schema iniziale per le tabelle chiave: 
+    - Customer (dettagli del customer, ogni istanza successiva, target, scan, ecc dovrà fare riferimento ad un customer, esclusi scantype e portlist che saranno globali )
     - Target (per gli host da scansionare)
         * id (AutoField PK)
         * name (CharField 255)
@@ -36,7 +37,7 @@ L'obiettivo è avere una base dati e un'interfaccia utente minima per gestire gl
         * description (TextField null)
     - Scan (scansione)
         * id (AutoField PK)
-        * asset_id ForeignKey(Target, on_delete=models.CASCADE)
+        * target_id ForeignKey(Target, on_delete=models.CASCADE)
         * scan_type_id ForeignKey(ScanType, on_delete=models.CASCADE)
         * status (CharField 50 choices=STATUS_CHOICES, default='Pending')
         * initiated_at (DateTimeField auto_now_add)
@@ -59,11 +60,9 @@ L'obiettivo è avere una base dati e un'interfaccia utente minima per gestire gl
             ('Completed', 'Completed'),
             ('Failed', 'Failed'),
         ]
-    - Scan_Type (creazione dei vari metodi di scan)
-    - Scans (per tracciare le scansioni con il loro stato)
     - Scan_detail (dettagli aggiuntivi legati ai singoli scan, tipo cve, vulnerabilità ,ecc )
     - VulnerabilityDefinitions (per i dettagli delle CVE) **Da implementare successivamente**
-    - DetectedVulnerabilities (per le occorrenze specifiche delle vulnerabilità sugli asset). **Da implementare successivamente**
+    - DetectedVulnerabilities (per le occorrenze specifiche delle vulnerabilità dei vari target). **Da implementare successivamente**
 
 
 2. **Backend Orchestratore (Django REST Framework):**
@@ -79,7 +78,7 @@ L'obiettivo è avere una base dati e un'interfaccia utente minima per gestire gl
 4. **Frontend (React):**
 
 - Creare l'interfaccia utente base per aggiungere i dati e avviare le prime scansioni (in questa fase di esempio, app ancora non funzionante)
-- Fornire un'interfaccia per avviare una scansione selezionando un asset precedentemente aggiunto e un tipo di scansione.
+- Fornire un'interfaccia per avviare una scansione selezionando un target precedentemente aggiunto e un tipo di scansione.
 - Creare una pagina per visualizzare l'elenco delle scansioni avviate e il loro stato.
 
 ### **Fase 2: Code RabbitMQ, API, modulo NMAP e prime scansioni base**
@@ -136,9 +135,9 @@ Creare l'interfaccia utente per aggiungere e visualizzare le scansioni
 3) salvare le eventuali vulnerabilità trovate nella tabella Vulnerability_details 
 
 2. **Frontend - Pubblicazione su frontend:**
-- Il frontend nella lista degli asset dovrà mostrare un pulsante dettagli, che se cliccato apra una nuova pagina in cui verranno mostrati:
-1) nome asset
-2) indirizzo asset
+- Il frontend nella lista dei target dovrà mostrare un pulsante dettagli, che se cliccato apra una nuova pagina in cui verranno mostrati:
+1) nome target
+2) indirizzo target
 3) probabile sistema operativo
 4) lista porte con applicazione e versione se rilevate
 5) lista vulnerabilità (per ora solo il nome, poi integreremo il vulnerability lookup e miglioreremo questi dati)
@@ -149,7 +148,7 @@ Creare l'interfaccia utente per aggiungere e visualizzare le scansioni
 2) All IANA assigned TCP and UDP
 3) All TCP and Nmap top 100 UDP
 - Creare tre tipi di scansioni base, già presenti all'avvio del sistema, utilizzabili da subito:
-1) Discovery -> scansione veloce che stabilisce se l'assett è alive, in sostanza quella lanciata col flag discovery_only
+1) Discovery -> scansione veloce che stabilisce se il target è alive, in sostanza quella lanciata col flag discovery_only
 2) Scan Base -> scansione più approfondita testando il gruppo di porte All IANA assigned TCP and UDP
 3) Scan Completo -> scansione approfondita con finger versioni app e SO, script ecc utilizzando le porte All TCP and Nmap top 100 UDP
 
