@@ -1,0 +1,117 @@
+# vapt_project_root/docker-compose.yml
+
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:16-alpine
+    container_name: vapter_db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-vapter}
+      POSTGRES_USER: ${POSTGRES_USER:-vapter}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vapter123}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - vapter_network
+    restart: unless-stopped
+
+  # RabbitMQ Message Broker
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: vapter_rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-vapter}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-vapter123}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    ports:
+      - "5672:5672"      # AMQP port
+      - "15672:15672"    # Management UI
+    networks:
+      - vapter_network
+    restart: unless-stopped
+
+  # Django Backend Orchestrator
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: vapter_backend
+    environment:
+      - DJANGO_SETTINGS_MODULE=vapter_backend.settings
+      - DEBUG=${DEBUG:-True}
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-in-production}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-vapter}:${POSTGRES_PASSWORD:-vapter123}@db:5432/${POSTGRES_DB:-vapter}
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-vapter}:${RABBITMQ_PASSWORD:-vapter123}@rabbitmq:5672/
+      - INTERNAL_API_GATEWAY_URL=http://backend:8000
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-http://vapter.szini.it:3000,http://localhost:3000}
+    volumes:
+      - ./backend:/app
+      - backend_media:/app/media
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - rabbitmq
+    networks:
+      - vapter_network
+    restart: unless-stopped
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py collectstatic --noinput &&
+             python manage.py loaddata initial_data.json &&
+             python manage.py runserver 0.0.0.0:8000"
+
+  # Django Backend Consumer (for RabbitMQ)
+  backend_consumer:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: vapter_backend_consumer
+    environment:
+      - DJANGO_SETTINGS_MODULE=vapter_backend.settings
+      - DEBUG=${DEBUG:-True}
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-in-production}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-vapter}:${POSTGRES_PASSWORD:-vapter123}@db:5432/${POSTGRES_DB:-vapter}
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-vapter}:${RABBITMQ_PASSWORD:-vapter123}@rabbitmq:5672/
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - db
+      - rabbitmq
+      - backend
+    networks:
+      - vapter_network
+    restart: unless-stopped
+    command: python manage.py consume_scan_status
+
+  # FastAPI Gateway (will be implemented in next phase)
+  # api_gateway:
+  #   build:
+  #     context: ./api_gateway
+  #     dockerfile: Dockerfile
+  #   container_name: vapter_api_gateway
+  #   environment:
+  #     - BACKEND_URL=http://backend:8000
+  #   volumes:
+  #     - ./api_gateway:/app
+  #   ports:
+  #     - "8080:8080"
+  #   depends_on:
+  #     - backend
+  #   networks:
+  #     - vapter_network
+  #   restart: unless-stopped
+
+volumes:
+  postgres_data:
+  rabbitmq_data:
+  backend_media:
+
+networks:
+  vapter_network:
+    driver: bridge
