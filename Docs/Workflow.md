@@ -5,12 +5,12 @@ Questo workflow descrive il percorso di una richiesta di scansione attraverso i 
 
 ### **1. Inizio Scansione (Frontend -> API Gateway -> Backend Orchestratore)**
 
-1. L'utente, da interfaccia web **Web Application (React)** , può creare gruppi di porte, es:
+1. L'utente, da interfaccia web **Web Application** , può creare gruppi di porte, es:
 * TOP 100 TCP e TOP 100 UDP
 * All IANA TCP
 * ecc...
 
-2. L'utente, da interfaccia web **Web Application (React)** , può creare diversi tipi di scansioni, es:
+2. L'utente, da interfaccia web **Web Application** , può creare diversi tipi di scansioni, es:
 * discovery, solo test is alive (is_alive)
 * scan veloce (nmap_base) in cui rilevare solo le porte aperte
 * scan approfondito (nmap_advanced) dove rilevare anche versioni applicazioni e del sistema operativo
@@ -18,9 +18,9 @@ Questo workflow descrive il percorso di una richiesta di scansione attraverso i 
 * ecc...
 e associare anche i gruppi di porte trovati prima, più i plugin da eseguire completata la prima scansione
 
-3. L'utente, dopo aver aggiunto uno o più Asset (target) tramite l'interfaccia, accede alla sezione "New Scan" della **Web Application (React)**. Seleziona un Asset dall'elenco dei target disponibili e un tipo di scansione (dall'elenco creato prima). Successivamente, clicca su "Avvia Scansione".
+3. L'utente, dopo aver aggiunto uno o più Asset (target) tramite l'interfaccia, accede alla sezione "New Scan" della **Web Application**. Seleziona un Asset dall'elenco dei target disponibili e un tipo di scansione (dall'elenco creato prima). Successivamente, clicca su "Avvia Scansione".
 
-4. La **Web Application (React)** invia una richiesta API  all'**API Gateway (FastAPI)**, includendo l'ID dell'asset selezionato e il tipo di scansione.
+4. La **Web Application** invia una richiesta API  all'**API Gateway (FastAPI)**, includendo l'ID dell'asset selezionato e il tipo di scansione.
 
 5. L'**API Gateway (FastAPI)** riceve la richiesta, se tutto è valido, inoltra la richiesta al **Backend Orchestratore (Django REST Framework)**. 
 

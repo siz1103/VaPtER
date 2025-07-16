@@ -46,7 +46,7 @@ vapt_project_root/
 │   │       └── logging.py          # Request logging middleware
 │   ├── Dockerfile                  # Docker configuration for API Gateway
 │   └── requirements.txt            # Python dependencies
-├── frontend/                        # ❌ DA IMPLEMENTARE - React Frontend
+├── frontend/                        # ❌ DA IMPLEMENTARE
 ├── plugins/                         # ❌ DA COMPLETARE - Scanner modules
 │   ├── nmap_scanner/               # ✅ IMPLEMENTATO- Nmap scanning module
 │   │   ├── __init__.py            # Package initialization
@@ -109,7 +109,7 @@ vapt_project_root/
 - **Testing**: Suite di test completa per verificare funzionalità
 
 ### ❌ DA IMPLEMENTARE
-- **Frontend (React)**: Interfaccia utente
+- **Frontend**: Interfaccia utente
 - **Altri Scanner Modules**: Fingerprint, Enum, Web, Vuln Lookup, Report Generator
 - **Authentication**: Sistema di autenticazione (struttura predisposta)
 - **Rate Limiting**: Limitazione delle richieste (opzionale)

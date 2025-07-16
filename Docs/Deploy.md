@@ -75,9 +75,12 @@ L'obiettivo è avere una base dati e un'interfaccia utente minima per gestire i 
 
 - Configurare FastAPI per instradare le richieste dal frontend alle API del Backend Orchestratore.
 
-4. **Frontend (React):**
+4. **Frontend :**
 
+- prima di tutto decidere il framework da utilizzare
 - Creare l'interfaccia utente base per aggiungere i dati e avviare le prime scansioni
+- Aggiungere un menù a tendina che elenchi i customer e permetta di crearne di nuovi.
+- I dati nelle pagine target e scansioni dovranno mostrare solo i dati dello specifico customer selezionato
 - Fornire un'interfaccia per avviare una scansione selezionando un target precedentemente aggiunto e un tipo di scansione.
 - Creare una pagina per visualizzare l'elenco delle scansioni avviate e il loro stato.
 
@@ -116,12 +119,8 @@ L'obiettivo è rendere le scansioni effettive e visualizzare i risultati.
     - Parsa l'output XML di Nmap.
     - Invia i risultati parsati (JSON) tramite API Gateway al backend. 
 
-4. **Frontend (React):**
 
-Creare l'interfaccia utente per aggiungere e visualizzare le scansioni
-
-
-5. **Backend Orchestratore (Django REST Framework) - Gestione Risultati e Flusso:**
+4. **Backend Orchestratore (Django REST Framework) - Gestione Risultati e Flusso:**
 
 - tramite API riceve i risultati dai moduli scanner (es. Nmap) e li salva nel record `Scan` appropriato (es. nel campo `parsed_nmap_results`).
 - Il consumer che ascolta `RABBITMQ_SCAN_STATUS_UPDATE_QUEUE` aggiorna lo stato della scansione nel database in base ai messaggi ricevuti. Quando un modulo (es. Nmap) riporta "completed" (e i risultati sono stati salvati), nel caso lo stato sia completed aggiorna anche la data di completamento.
