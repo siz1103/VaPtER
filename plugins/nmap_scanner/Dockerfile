@@ -16,15 +16,16 @@ RUN apt-get update && apt-get install -y \
     curl \
     netcat-traditional \
     dnsutils \
+    python3-requests \
+    python3-nmap \
+    python3-dateutil \
     && rm -rf /var/lib/apt/lists/*
 
 # Set work directory
 WORKDIR /app
 
-# Install Python dependencies
-COPY requirements.txt /app/
-RUN pip3 install --upgrade pip && \
-    pip3 install -r requirements.txt
+# Install only packages not available via apt (with --break-system-packages)
+RUN pip3 install --break-system-packages pika==1.3.2 typing-extensions==4.8.0
 
 # Copy application code
 COPY . /app/

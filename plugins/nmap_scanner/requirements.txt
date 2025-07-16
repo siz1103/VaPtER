@@ -1,23 +1,27 @@
 # plugins/nmap_scanner/requirements.txt
 
-# HTTP client for API communication
-requests==2.31.0
+# Note: Most packages are installed via apt in Dockerfile for Kali Linux compatibility
+# Only packages not available via apt are listed here
 
-# RabbitMQ client
+# RabbitMQ client (not available as python3-pika in Kali)
 pika==1.3.2
 
-# XML parsing (included in Python standard library, but explicit for clarity)
-# xml.etree.ElementTree is built-in
-
-# JSON handling (built-in, but for reference)
-# json is built-in
-
-# Additional networking utilities
-python-nmap==0.7.1
-
-# Validation and data processing
-ipaddress
+# Typing extensions for older Python versions
 typing-extensions==4.8.0
 
-# Utilities
-python-dateutil==2.8.2
+# Packages installed via apt (for reference):
+# - python3-requests (HTTP client for API communication)
+# - python3-nmap (Python nmap library)
+# - python3-dateutil (Date/time utilities)
+# - nmap (Nmap binary)
+
+# Built-in Python modules (for reference):
+# - xml.etree.ElementTree (XML parsing)
+# - json (JSON handling)
+# - ipaddress (IP address validation)
+# - subprocess (Process execution)
+# - logging (Logging)
+# - signal (Signal handling)
+# - time (Time utilities)
+# - datetime (Date/time handling)
+# - typing (Type hints)
