@@ -1,5 +1,3 @@
-// frontend/src/context/AppContext.tsx
-
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
 import { Customer, DashboardStats, CustomerStats } from '../types';
 

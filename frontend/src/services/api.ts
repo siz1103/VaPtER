@@ -1,5 +1,3 @@
-// frontend/src/services/api.ts
-
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
 import {
   Customer,
