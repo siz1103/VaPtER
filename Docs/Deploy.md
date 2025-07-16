@@ -104,11 +104,7 @@ L'obiettivo è rendere le scansioni effettive e visualizzare i risultati.
         - Potrebbe anche avviare la fase successiva della scansione se lo stato indica il completamento di un modulo.
         - Gestisce i messaggi di acknowledge/not acknowledge (ack/nack) per RabbitMQ.
 
-3. **Frontend (React):**
-
-Creare l'interfaccia utente per aggiungere e visualizzare le scansioni
-
-4. **Modulo Scanner Nmap (Dockerizzato in `plugins/nmap_scanner`):**
+3. **Modulo Scanner Nmap (Dockerizzato in `plugins/nmap_scanner`):**
 
 - Creare un Dockerfile per il container Nmap (basato su `kalilinux/kali-rolling`).
 
@@ -119,6 +115,11 @@ Creare l'interfaccia utente per aggiungere e visualizzare le scansioni
     - Pubblica aggiornamenti di stato (es. "running", "parsing", "completed", "error") sulla coda `RABBITMQ_SCAN_STATUS_UPDATE_QUEUE`.
     - Parsa l'output XML di Nmap.
     - Invia i risultati parsati (JSON) tramite API Gateway al backend. 
+
+4. **Frontend (React):**
+
+Creare l'interfaccia utente per aggiungere e visualizzare le scansioni
+
 
 5. **Backend Orchestratore (Django REST Framework) - Gestione Risultati e Flusso:**
 

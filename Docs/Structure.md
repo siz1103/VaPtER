@@ -25,6 +25,7 @@ vapt_project_root/
 │   │   ├── services.py              # Business logic and RabbitMQ services
 │   │   ├── urls.py                  # API URL routing
 │   │   └── views.py                 # API views
+│   ├── __init__.py
 │   ├── Dockerfile                   # Docker configuration for backend
 │   ├── requirements.txt             # Python dependencies
 │   └── manage.py                    # Django management script
@@ -46,8 +47,8 @@ vapt_project_root/
 │   ├── Dockerfile                  # Docker configuration for API Gateway
 │   └── requirements.txt            # Python dependencies
 ├── frontend/                        # ❌ DA IMPLEMENTARE - React Frontend
-├── plugins/                         # ❌ DA IMPLEMENTARE - Scanner modules
-│   ├── nmap_scanner/               # ❌ DA IMPLEMENTARE- Nmap scanning module
+├── plugins/                         # ❌ DA COMPLETARE - Scanner modules
+│   ├── nmap_scanner/               # ✅ IMPLEMENTATO- Nmap scanning module
 │   │   ├── __init__.py            # Package initialization
 │   │   ├── nmap_scanner.py        # Main scanner application
 │   │   ├── config.py              # Configuration settings
@@ -97,7 +98,7 @@ vapt_project_root/
 - **Configuration Management**: Sistema di configurazione centralizzato
 - **Docker Integration**: Container completamente configurato e integrato
 
-### ❌ DA IMPLEMENTARE Nmap Scanner Module - Caratteristiche Implementate
+### ✅ Nmap Scanner Module - Caratteristiche Implementate
 - **Network Scanning**: Scansioni di discovery, porte TCP/UDP, version detection
 - **XML Parsing**: Parser completo per output XML di Nmap
 - **RabbitMQ Integration**: Consumer per richieste e publisher per status updates
