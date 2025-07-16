@@ -77,7 +77,7 @@ L'obiettivo è avere una base dati e un'interfaccia utente minima per gestire i 
 
 4. **Frontend (React):**
 
-- Creare l'interfaccia utente base per aggiungere i dati e avviare le prime scansioni (in questa fase di esempio, app ancora non funzionante)
+- Creare l'interfaccia utente base per aggiungere i dati e avviare le prime scansioni
 - Fornire un'interfaccia per avviare una scansione selezionando un target precedentemente aggiunto e un tipo di scansione.
 - Creare una pagina per visualizzare l'elenco delle scansioni avviate e il loro stato.
 
