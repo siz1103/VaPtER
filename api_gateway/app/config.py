@@ -1,3 +1,5 @@
+# api_gateway/app/config.py
+
 import os
 from typing import List
 from pydantic_settings import BaseSettings
@@ -20,11 +22,8 @@ class Settings(BaseSettings):
     BACKEND_URL: str = "http://backend:8000"
     BACKEND_TIMEOUT: int = 30
     
-    # CORS settings
-    CORS_ALLOWED_ORIGINS: List[str] = [
-        "http://vapter.szini.it:3000",
-        "http://localhost:3000"
-    ]
+    # CORS settings - using string to avoid JSON parsing issues
+    CORS_ALLOWED_ORIGINS: str = "http://vapter.szini.it:3000,http://localhost:3000"
     
     # Authentication settings (for future use)
     SECRET_KEY: str = "your-secret-key-change-in-production"
@@ -38,14 +37,21 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = True
+        # Don't try to parse env vars as JSON
+        env_parse_none_str = None
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        # Parse CORS origins if they come as a string
-        if isinstance(self.CORS_ALLOWED_ORIGINS, str):
-            self.CORS_ALLOWED_ORIGINS = [
-                origin.strip() for origin in self.CORS_ALLOWED_ORIGINS.split(',')
-            ]
+    @property
+    def cors_origins_list(self) -> List[str]:
+        """Get CORS origins as a list"""
+        if not self.CORS_ALLOWED_ORIGINS:
+            return []
+        
+        origins = []
+        for origin in self.CORS_ALLOWED_ORIGINS.split(','):
+            origin = origin.strip()
+            if origin:
+                origins.append(origin)
+        return origins
 
 
 # Create global settings instance
