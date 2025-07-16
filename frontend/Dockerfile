@@ -4,7 +4,7 @@ FROM node:18-alpine
 
 # Set environment variables
 ENV NODE_ENV=development
-ENV REACT_APP_API_URL=http://localhost:8080
+ENV REACT_APP_API_URL=http://vapter.szini.it:8080
 
 # Set work directory
 WORKDIR /app
@@ -12,8 +12,8 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm install
+# Install dependencies with legacy peer deps to handle version conflicts
+RUN npm install --legacy-peer-deps
 
 # Copy application code
 COPY . .
