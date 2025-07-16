@@ -59,7 +59,8 @@ services:
       - vapter_network
     restart: unless-stopped
     command: >
-      sh -c "python manage.py migrate &&
+      sh -c "python manage.py makemigrations orchestrator_api &&
+             python manage.py migrate &&
              python manage.py collectstatic --noinput &&
              python manage.py loaddata initial_data.json &&
              python manage.py runserver 0.0.0.0:8000"
