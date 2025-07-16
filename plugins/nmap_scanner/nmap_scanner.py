@@ -91,9 +91,35 @@ class NmapScanner:
             scan_type_data = response.json()
             logger.info(f"Retrieved scan type {scan_type_id}: {scan_type_data['name']}")
             
+            # If port_list is an ID, fetch the full port_list details
+            if scan_type_data.get('port_list') and isinstance(scan_type_data['port_list'], int):
+                port_list_id = scan_type_data['port_list']
+                port_list_data = self.get_port_list_details(port_list_id)
+                if port_list_data:
+                    scan_type_data['port_list'] = port_list_data
+                else:
+                    logger.warning(f"Failed to get port_list details for ID {port_list_id}")
+                    scan_type_data['port_list'] = None
+            
             return scan_type_data
         except Exception as e:
             logger.error(f"Failed to get scan parameters: {str(e)}")
+            return None
+    
+    def get_port_list_details(self, port_list_id: int) -> Optional[Dict[str, Any]]:
+        """Get port list details from API Gateway"""
+        try:
+            url = f"{settings.API_GATEWAY_URL}/api/orchestrator/port-lists/{port_list_id}/"
+            
+            response = requests.get(url, timeout=30)
+            response.raise_for_status()
+            
+            port_list_data = response.json()
+            logger.info(f"Retrieved port list {port_list_id}: {port_list_data['name']}")
+            
+            return port_list_data
+        except Exception as e:
+            logger.error(f"Failed to get port list details: {str(e)}")
             return None
     
     def build_nmap_command(self, target_host: str, scan_type_data: Dict[str, Any]) -> List[str]:
@@ -114,32 +140,48 @@ class NmapScanner:
             
             # Port specification
             port_list = scan_type_data.get('port_list')
-            if port_list:
+            logger.info(f"Port list data: {port_list}")
+            
+            if port_list and isinstance(port_list, dict):
                 ports = []
-                if port_list.get('tcp_ports'):
-                    ports.append(f"T:{port_list['tcp_ports']}")
-                if port_list.get('udp_ports'):
+                tcp_ports = port_list.get('tcp_ports')
+                udp_ports = port_list.get('udp_ports')
+                
+                if tcp_ports:
+                    ports.append(f"T:{tcp_ports}")
+                    logger.info(f"Added TCP ports: {tcp_ports}")
+                
+                if udp_ports:
                     cmd.extend(['-sU'])  # UDP scan
-                    ports.append(f"U:{port_list['udp_ports']}")
+                    ports.append(f"U:{udp_ports}")
+                    logger.info(f"Added UDP ports: {udp_ports}")
                 
                 if ports:
                     cmd.extend(['-p', ','.join(ports)])
+                else:
+                    logger.warning("No ports specified in port_list, using default ports")
+            else:
+                logger.info("No port_list specified, using default ports")
             
             # Service/version detection
             if not scan_type_data.get('be_quiet'):
                 cmd.extend(['-sV'])  # Version detection
                 cmd.extend(['-O'])   # OS detection
                 cmd.extend(['-sC'])  # Default scripts
+                logger.info("Added service detection and OS detection")
         
         # Timing and performance
         if scan_type_data.get('be_quiet'):
             cmd.extend(['-T2'])  # Polite timing
+            logger.info("Using polite timing (-T2)")
         else:
             cmd.extend(['-T4'])  # Aggressive timing
+            logger.info("Using aggressive timing (-T4)")
         
         # Host discovery
         if scan_type_data.get('consider_alive'):
             cmd.extend(['-Pn'])  # Skip host discovery
+            logger.info("Skipping host discovery (-Pn)")
         
         # Target
         cmd.append(target_host)
@@ -346,7 +388,7 @@ class NmapScanner:
             scan_type_id = message.get('scan_type_id')
             target_host = message.get('target_host')
             
-            logger.info(f"Received scan request: scan_id={scan_id}, target={target_host}")
+            logger.info(f"Received scan request: scan_id={scan_id}, scan_type_id={scan_type_id}, target={target_host}")
             
             # Validate message
             if not all([scan_id, scan_type_id, target_host]):
@@ -360,24 +402,37 @@ class NmapScanner:
             self.publish_status_update(scan_id, 'received', 'Scan request received by Nmap module')
             
             # Get scan parameters
+            logger.info(f"Getting scan parameters for scan_type_id={scan_type_id}")
             scan_type_data = self.get_scan_parameters(scan_type_id)
             if not scan_type_data:
                 self.publish_status_update(scan_id, 'error', error_details='Failed to retrieve scan parameters')
                 channel.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
                 return
             
+            logger.info(f"Scan type data: {scan_type_data}")
+            
             # Build nmap command
-            nmap_cmd = self.build_nmap_command(target_host, scan_type_data)
+            try:
+                nmap_cmd = self.build_nmap_command(target_host, scan_type_data)
+                logger.info(f"Built nmap command successfully: {' '.join(nmap_cmd)}")
+            except Exception as e:
+                error_msg = f"Failed to build nmap command: {str(e)}"
+                logger.error(error_msg)
+                self.publish_status_update(scan_id, 'error', error_details=error_msg)
+                channel.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
+                return
             
             # Execute scan
             xml_output = self.execute_nmap_scan(nmap_cmd, scan_id)
             if not xml_output:
+                # Error already published in execute_nmap_scan
                 channel.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
                 return
             
             # Parse results
             try:
                 parsed_results = self.parse_nmap_xml(xml_output)
+                logger.info(f"Parsed results successfully: {len(parsed_results.get('hosts', []))} hosts found")
             except Exception as e:
                 error_msg = f"Failed to parse nmap results: {str(e)}"
                 logger.error(error_msg)
@@ -401,6 +456,8 @@ class NmapScanner:
             channel.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
         except Exception as e:
             logger.error(f"Error processing scan request: {str(e)}")
+            logger.error(f"Error type: {type(e).__name__}")
+            logger.error(f"Error details: {repr(e)}")
             if self.current_scan_id:
                 self.publish_status_update(self.current_scan_id, 'error', error_details=str(e))
             channel.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
