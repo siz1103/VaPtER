@@ -1,0 +1,23 @@
+# plugins/nmap_scanner/requirements.txt
+
+# HTTP client for API communication
+requests==2.31.0
+
+# RabbitMQ client
+pika==1.3.2
+
+# XML parsing (included in Python standard library, but explicit for clarity)
+# xml.etree.ElementTree is built-in
+
+# JSON handling (built-in, but for reference)
+# json is built-in
+
+# Additional networking utilities
+python-nmap==0.7.1
+
+# Validation and data processing
+ipaddress
+typing-extensions==4.8.0
+
+# Utilities
+python-dateutil==2.8.2

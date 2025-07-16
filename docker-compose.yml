@@ -110,6 +110,38 @@ services:
       - vapter_network
     restart: unless-stopped
 
+# Nmap Scanner Module
+  nmap_scanner:
+    build:
+      context: ./plugins/nmap_scanner
+      dockerfile: Dockerfile
+    container_name: vapter_nmap_scanner
+    environment:
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-vapter}:${RABBITMQ_PASSWORD:-vapter123}@rabbitmq:5672/
+      - INTERNAL_API_GATEWAY_URL=http://api_gateway:8080
+      - RABBITMQ_NMAP_SCAN_REQUEST_QUEUE=nmap_scan_requests
+      - RABBITMQ_SCAN_STATUS_UPDATE_QUEUE=scan_status_updates
+      - NMAP_TIMEOUT=${NMAP_TIMEOUT:-3600}
+      - MAX_PARALLEL_SCANS=${MAX_PARALLEL_SCANS:-1}
+      - TEMP_RESULTS_DIR=/tmp/nmap_results
+      - KEEP_RAW_OUTPUT=${KEEP_RAW_OUTPUT:-false}
+    volumes:
+      - ./plugins/nmap_scanner:/app
+      - nmap_temp_results:/tmp/nmap_results
+    depends_on:
+      - rabbitmq
+      - api_gateway
+    networks:
+      - vapter_network
+    restart: unless-stopped
+    # Add security options for scanning
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    # Network mode for scanning (optional - use host mode for better network access)
+    # network_mode: host  # Uncomment if needed for advanced scanning
+    
   # React Frontend (will be implemented in next phase)
   # frontend:
   #   build:
