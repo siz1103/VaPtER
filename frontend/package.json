@@ -49,8 +49,6 @@
     "autoprefixer": "^10.4.16",
     "postcss": "^8.4.33"
   },
-  "proxy": "http://localhost:8080"
-}
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
