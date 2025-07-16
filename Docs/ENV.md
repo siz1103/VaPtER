@@ -59,6 +59,12 @@ Il sistema VaPtER utilizza diverse variabili d'ambiente per la configurazione. D
 | `RABBITMQ_REPORT_REQUEST_QUEUE` | Coda richieste generazione report | `report_requests` |
 | `RABBITMQ_SCAN_STATUS_UPDATE_QUEUE` | Coda aggiornamenti stato scan | `scan_status_updates` |
 
+### Configurazione Frontend
+
+| Variabile | Descrizione | Valore di Default |
+|-----------|-------------|------------------|
+| `VITE_API_URL` | URL base per le chiamate API | `/api` |
+
 ### Comunicazione Interna
 
 | Variabile | Descrizione | Valore di Default | Obbligatoria |

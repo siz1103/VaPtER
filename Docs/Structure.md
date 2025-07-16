@@ -46,7 +46,34 @@ vapt_project_root/
 │   │       └── logging.py          # Request logging middleware
 │   ├── Dockerfile                  # Docker configuration for API Gateway
 │   └── requirements.txt            # Python dependencies
-├── frontend/                        # ❌ DA IMPLEMENTARE
+├── frontend/                        # ✅ IN IMPLEMENTAZIONE - React + shadcn/ui
+│   ├── src/                         # Source code
+│   │   ├── components/              # React components
+│   │   │   ├── layout/              # Layout components
+│   │   │   └── ui/                  # shadcn/ui components
+│   │   ├── hooks/                   # Custom React hooks
+│   │   ├── lib/                     # Utilities and helpers
+│   │   │   ├── api.ts               # API client configuration
+│   │   │   └── utils.ts             # Utility functions
+│   │   ├── pages/                   # Page components
+│   │   │   └── settings/            # Settings pages
+│   │   ├── services/                # API service layer
+│   │   ├── store/                   # Zustand state management
+│   │   ├── types/                   # TypeScript type definitions
+│   │   ├── App.tsx                  # Main App component
+│   │   ├── index.css                # Global styles + Tailwind
+│   │   ├── main.tsx                 # Application entry point
+│   │   └── vite-env.d.ts            # Vite type definitions
+│   ├── index.html                   # HTML entry point
+│   ├── package.json                 # Dependencies and scripts
+│   ├── tsconfig.json                # TypeScript configuration
+│   ├── tsconfig.node.json           # TypeScript config for Vite
+│   ├── vite.config.ts               # Vite configuration
+│   ├── tailwind.config.js           # Tailwind CSS configuration
+│   ├── postcss.config.js            # PostCSS configuration
+│   ├── .eslintrc.cjs                # ESLint configuration
+│   ├── .gitignore                   # Git ignore rules
+│   └── Dockerfile                   # Docker configuration
 ├── plugins/                         # ❌ DA COMPLETARE - Scanner modules
 │   ├── nmap_scanner/               # ✅ IMPLEMENTATO- Nmap scanning module
 │   │   ├── __init__.py            # Package initialization
@@ -88,6 +115,31 @@ vapt_project_root/
 - **Admin Interface**: Django admin configurato per tutti i models
 - **Logging & Monitoring**: Sistema di logging centralizzato nell'API Gateway
 
+### ✅ COMPLETATO
+- **Backend Django Orchestrator**: Completo con models, API, admin, services
+- **Database Models**: Customer, PortList, ScanType, Target, Scan, ScanDetail
+- **API REST**: CRUD completo per tutti i models con filtri e paginazione
+- **RabbitMQ Integration**: Services per publishing e consumer per status updates
+- **API Gateway FastAPI**: Reverse proxy completo verso backend Django
+- **Nmap Scanner Module**: Modulo completo per scansioni di rete con Nmap
+- **Docker Configuration**: docker-compose.yml aggiornato con tutti i servizi
+- **Initial Data**: Fixtures con PortList e ScanType predefiniti
+- **Admin Interface**: Django admin configurato per tutti i models
+- **Logging & Monitoring**: Sistema di logging centralizzato nell'API Gateway
+
+### 🚧 IN SVILUPPO
+- **Frontend React**: Setup iniziale completato, componenti UI in sviluppo
+  - ✅ Configurazione base (React + TypeScript + Vite)
+  - ✅ Integrazione shadcn/ui e Tailwind CSS
+  - ✅ Tema dark con palette di grigi
+  - ✅ Struttura routing e layout base
+  - ✅ Configurazione API client (axios)
+  - ✅ Type definitions per tutti i modelli
+  - ❌ Componenti UI (in sviluppo)
+  - ❌ Pagine principali (Dashboard, Targets, Scans, Settings)
+  - ❌ Gestione stato con Zustand
+  - ❌ Integrazione completa con API Gateway
+
 ### ✅ API Gateway - Caratteristiche Implementate
 - **Reverse Proxy**: Tutti gli endpoint del backend accessibili tramite gateway
 - **Health Checks**: Endpoint dedicati per monitoring e readiness/liveness probes
@@ -109,7 +161,6 @@ vapt_project_root/
 - **Testing**: Suite di test completa per verificare funzionalità
 
 ### ❌ DA IMPLEMENTARE
-- **Frontend**: Interfaccia utente
 - **Altri Scanner Modules**: Fingerprint, Enum, Web, Vuln Lookup, Report Generator
 - **Authentication**: Sistema di autenticazione (struttura predisposta)
 - **Rate Limiting**: Limitazione delle richieste (opzionale)

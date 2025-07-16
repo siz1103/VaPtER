@@ -34,3 +34,35 @@ Sviluppare una piattaforma di Vulnerability Assessment personalizzata, basata su
 - **Sicurezza dei Container:** Applica le best practice Docker: usa immagini base minimali e fidate, esegui i container con il principio del minimo privilegio (non-root user, --cap-drop all e --cap-add solo le necessarie), imposta filesystem di sola lettura (--read-only) e configura la rete per isolare i container (--network custom). 
 
 - **Orchestrazione per la Produzione:** Per un ambiente di produzione, dove scalabilità orizzontale, resilienza e alta disponibilità sono critiche, un orchestratore di container come Kubernetes o Docker Swarm sarà essenziale. Pianifica la transizione da Docker Compose a uno di questi strumenti.
+
+
+### URL di Accesso
+
+#### Servizi Web
+
+- **Frontend React**: http://vapter.szini.it:3000/
+- **API Gateway**: http://vapter.szini.it:8080/
+- **API Gateway Docs**: http://vapter.szini.it:8080/docs
+- **API Gateway Health**: http://vapter.szini.it:8080/health/detailed
+- **Backend API**: http://vapter.szini.it:8000/api/orchestrator/
+- **Django Admin**: http://vapter.szini.it:8000/admin/
+- **Backend API Documentation**: http://vapter.szini.it:8000/api/schema/swagger-ui/
+- **RabbitMQ Management**: http://vapter.szini.it:15672/ (vapter/vapter123)
+
+
+## Base URL
+
+### Produzione (Accesso Principale)
+- **Frontend React**: `http://vapter.szini.it:3000/`
+- **API Gateway**: `http://vapter.szini.it:8080/api/orchestrator/`
+- **Documentazione API**: `http://vapter.szini.it:8080/docs`
+
+### Development (Accesso Diretto)
+- **Backend Django**: `http://vapter.szini.it:8000/api/orchestrator/`
+- **Django Admin**: `http://vapter.szini.it:8000/admin/`
+- **API Schema Django**: `http://vapter.szini.it:8000/api/schema/swagger-ui/`
+
+### Monitoring & Health
+- **Gateway Health**: `http://vapter.szini.it:8080/health/`
+- **Gateway Detailed Health**: `http://vapter.szini.it:8080/health/detailed`
+- **RabbitMQ Management**: `http://vapter.szini.it:15672/`
