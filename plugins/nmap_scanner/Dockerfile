@@ -14,6 +14,7 @@ RUN apt-get update && apt-get install -y \
     python3-venv \
     nmap \
     curl \
+    libcap2-bin \
     netcat-traditional \
     dnsutils \
     python3-requests \
