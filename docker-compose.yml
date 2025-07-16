@@ -141,7 +141,7 @@ services:
       - NET_RAW
     # Network mode for scanning (optional - use host mode for better network access)
     # network_mode: host  # Uncomment if needed for advanced scanning
-    
+
   # React Frontend (will be implemented in next phase)
   # frontend:
   #   build:
@@ -164,7 +164,8 @@ volumes:
   postgres_data:
   rabbitmq_data:
   backend_media:
-
+  nmap_temp_results:
+  
 networks:
   vapter_network:
     driver: bridge
