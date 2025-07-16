@@ -1,15 +1,35 @@
 # VaPtER API Documentation
 
-Questo documento descrive le API REST implementate nel backend Django orchestrator.
+Questo documento descrive le API REST implementate nella piattaforma VaPtER.
+
+## Architettura API
+
+La piattaforma utilizza un **API Gateway Pattern** con FastAPI come gateway principale che fa da reverse proxy verso il backend Django.
+
+```
+Frontend → API Gateway (FastAPI) → Backend Orchestrator (Django)
+```
 
 ## Base URL
 
-- **Development**: `http://vapter.szini.it:8000/api/orchestrator/`
-- **API Schema**: `http://vapter.szini.it:8000/api/schema/swagger-ui/`
+### Produzione (Accesso Principale)
+- **API Gateway**: `http://vapter.szini.it:8080/api/orchestrator/`
+- **Documentazione API**: `http://vapter.szini.it:8080/docs`
+
+### Development (Accesso Diretto)
+- **Backend Django**: `http://vapter.szini.it:8000/api/orchestrator/`
+- **Django Admin**: `http://vapter.szini.it:8000/admin/`
+- **API Schema Django**: `http://vapter.szini.it:8000/api/schema/swagger-ui/`
+
+### Monitoring & Health
+- **Gateway Health**: `http://vapter.szini.it:8080/health/`
+- **Gateway Detailed Health**: `http://vapter.szini.it:8080/health/detailed`
+- **RabbitMQ Management**: `http://vapter.szini.it:15672/`
 
 ## Autenticazione
 
 Al momento non è implementata l'autenticazione. Tutte le API sono accessibili senza autenticazione.
+L'API Gateway è predisposto per l'implementazione futura di autenticazione JWT.
 
 ## Formato Risposta
 
@@ -41,11 +61,56 @@ Tutte le API restituiscono JSON con il seguente formato standard:
 }
 ```
 
-## Endpoints
+## API Gateway Endpoints
+
+### Health Check Endpoints
+
+#### GET /health/
+Health check base dell'API Gateway.
+
+**Risposta:**
+```json
+{
+  "status": "healthy",
+  "service": "api_gateway",
+  "version": "1.0.0",
+  "timestamp": 1641024000.123
+}
+```
+
+#### GET /health/detailed
+Health check dettagliato con verifica backend.
+
+**Risposta:**
+```json
+{
+  "status": "healthy",
+  "service": "api_gateway",
+  "version": "1.0.0",
+  "timestamp": 1641024000.123,
+  "checks": {
+    "backend": {
+      "status": "healthy",
+      "url": "http://backend:8000",
+      "response_time_ms": 45.67
+    }
+  }
+}
+```
+
+#### GET /health/readiness
+Kubernetes readiness probe endpoint.
+
+#### GET /health/liveness
+Kubernetes liveness probe endpoint.
+
+## Orchestrator API Endpoints
+
+Tutti gli endpoint dell'orchestrator sono accessibili tramite l'API Gateway con il prefisso `/api/orchestrator/`.
 
 ### 1. Customers
 
-#### GET /customers/
+#### GET /api/orchestrator/customers/
 Ottenere lista di tutti i clienti.
 
 **Parametri Query:**
@@ -79,7 +144,7 @@ Ottenere lista di tutti i clienti.
 }
 ```
 
-#### POST /customers/
+#### POST /api/orchestrator/customers/
 Creare un nuovo cliente.
 
 **Body:**
@@ -95,22 +160,22 @@ Creare un nuovo cliente.
 }
 ```
 
-#### GET /customers/{id}/
+#### GET /api/orchestrator/customers/{id}/
 Ottenere dettagli di un cliente specifico.
 
-#### PUT/PATCH /customers/{id}/
+#### PUT/PATCH /api/orchestrator/customers/{id}/
 Aggiornare un cliente.
 
-#### DELETE /customers/{id}/
+#### DELETE /api/orchestrator/customers/{id}/
 Eliminare un cliente (soft delete).
 
-#### GET /customers/{id}/targets/
+#### GET /api/orchestrator/customers/{id}/targets/
 Ottenere tutti i target di un cliente.
 
-#### GET /customers/{id}/scans/
+#### GET /api/orchestrator/customers/{id}/scans/
 Ottenere tutte le scansioni di un cliente.
 
-#### GET /customers/{id}/statistics/
+#### GET /api/orchestrator/customers/{id}/statistics/
 Ottenere statistiche del cliente.
 
 **Risposta:**
@@ -129,7 +194,7 @@ Ottenere statistiche del cliente.
 
 ### 2. Port Lists
 
-#### GET /port-lists/
+#### GET /api/orchestrator/port-lists/
 Ottenere lista delle configurazioni di porte.
 
 **Risposta:**
@@ -150,7 +215,7 @@ Ottenere lista delle configurazioni di porte.
 }
 ```
 
-#### POST /port-lists/
+#### POST /api/orchestrator/port-lists/
 Creare una nuova lista di porte.
 
 **Body:**
@@ -165,7 +230,7 @@ Creare una nuova lista di porte.
 
 ### 3. Scan Types
 
-#### GET /scan-types/
+#### GET /api/orchestrator/scan-types/
 Ottenere lista dei tipi di scansione.
 
 **Parametri Query:**
@@ -197,12 +262,12 @@ Ottenere lista dei tipi di scansione.
 }
 ```
 
-#### POST /scan-types/
+#### POST /api/orchestrator/scan-types/
 Creare un nuovo tipo di scansione.
 
 ### 4. Targets
 
-#### GET /targets/
+#### GET /api/orchestrator/targets/
 Ottenere lista dei target.
 
 **Parametri Query:**
@@ -236,7 +301,7 @@ Ottenere lista dei target.
 }
 ```
 
-#### POST /targets/
+#### POST /api/orchestrator/targets/
 Creare un nuovo target.
 
 **Body:**
@@ -249,7 +314,7 @@ Creare un nuovo target.
 }
 ```
 
-#### POST /targets/{id}/scan/
+#### POST /api/orchestrator/targets/{id}/scan/
 Avviare una nuova scansione per un target.
 
 **Body:**
@@ -261,7 +326,7 @@ Avviare una nuova scansione per un target.
 
 ### 5. Scans
 
-#### GET /scans/
+#### GET /api/orchestrator/scans/
 Ottenere lista delle scansioni.
 
 **Parametri Query:**
@@ -304,7 +369,7 @@ Ottenere lista delle scansioni.
 }
 ```
 
-#### POST /scans/
+#### POST /api/orchestrator/scans/
 Creare e avviare una nuova scansione.
 
 **Body:**
@@ -315,10 +380,10 @@ Creare e avviare una nuova scansione.
 }
 ```
 
-#### GET /scans/{id}/
+#### GET /api/orchestrator/scans/{id}/
 Ottenere dettagli di una scansione.
 
-#### PATCH /scans/{id}/
+#### PATCH /api/orchestrator/scans/{id}/
 Aggiornare una scansione (usato principalmente dai moduli scanner).
 
 **Body:**
@@ -330,18 +395,18 @@ Aggiornare una scansione (usato principalmente dai moduli scanner).
 }
 ```
 
-#### POST /scans/{id}/restart/
+#### POST /api/orchestrator/scans/{id}/restart/
 Riavviare una scansione fallita o completata.
 
-#### POST /scans/{id}/cancel/
+#### POST /api/orchestrator/scans/{id}/cancel/
 Cancellare una scansione in corso.
 
-#### GET /scans/statistics/
+#### GET /api/orchestrator/scans/statistics/
 Ottenere statistiche generali delle scansioni.
 
 ### 6. Scan Details
 
-#### GET /scan-details/
+#### GET /api/orchestrator/scan-details/
 Ottenere dettagli aggiuntivi delle scansioni.
 
 **Parametri Query:**
@@ -353,7 +418,30 @@ Ottenere dettagli aggiuntivi delle scansioni.
 - **201**: Created - Risorsa creata con successo
 - **400**: Bad Request - Errore nei dati inviati
 - **404**: Not Found - Risorsa non trovata
+- **502**: Bad Gateway - Errore di comunicazione con backend
+- **503**: Service Unavailable - Backend non disponibile
+- **504**: Gateway Timeout - Timeout comunicazione backend
 - **500**: Internal Server Error - Errore interno del server
+
+## API Gateway Features
+
+### Request Logging
+Tutte le richieste vengono loggiate con:
+- Request ID univoco
+- Metodo HTTP e URL
+- IP client e User-Agent
+- Durata della richiesta
+- Status code di risposta
+
+### Error Handling
+- Timeout configurabile per richieste backend
+- Retry logic automatico per errori temporanei
+- Propagazione appropriata degli errori
+- Logging dettagliato degli errori
+
+### Headers Personalizzati
+- `X-Request-ID`: ID univoco della richiesta
+- `X-Process-Time`: Tempo di elaborazione in secondi
 
 ## Filtri e Ricerca
 
@@ -365,32 +453,60 @@ Tutte le API supportano:
 
 ## Esempi di Utilizzo
 
-### Creare un cliente e avviare una scansione
+### Tramite API Gateway (Raccomandato)
 
 ```bash
-# 1. Creare un cliente
-curl -X POST http://vapter.szini.it:8000/api/orchestrator/customers/ \
+# 1. Verificare stato del gateway
+curl http://vapter.szini.it:8080/health/detailed
+
+# 2. Creare un cliente
+curl -X POST http://vapter.szini.it:8080/api/orchestrator/customers/ \
   -H "Content-Type: application/json" \
   -d '{"name": "Test Corp", "email": "test@testcorp.com"}'
 
-# 2. Creare un target
-curl -X POST http://vapter.szini.it:8000/api/orchestrator/targets/ \
+# 3. Creare un target
+curl -X POST http://vapter.szini.it:8080/api/orchestrator/targets/ \
   -H "Content-Type: application/json" \
   -d '{"customer": "customer-uuid", "name": "Web Server", "address": "192.168.1.100"}'
 
-# 3. Avviare una scansione
-curl -X POST http://vapter.szini.it:8000/api/orchestrator/targets/1/scan/ \
+# 4. Avviare una scansione
+curl -X POST http://vapter.szini.it:8080/api/orchestrator/targets/1/scan/ \
   -H "Content-Type: application/json" \
   -d '{"scan_type_id": 2}'
 
-# 4. Monitorare la scansione
-curl http://vapter.szini.it:8000/api/orchestrator/scans/1/
+# 5. Monitorare la scansione
+curl http://vapter.szini.it:8080/api/orchestrator/scans/1/
+```
+
+### Accesso Diretto Backend (Solo Development)
+
+```bash
+# Accesso diretto al backend Django (bypass gateway)
+curl http://vapter.szini.it:8000/api/orchestrator/customers/
 ```
 
 ## Workflow Tipico
 
-1. **Setup iniziale**: Creare cliente e target
+1. **Setup iniziale**: Creare cliente e target tramite API Gateway
 2. **Configurazione**: Scegliere tipo di scansione appropriato
-3. **Esecuzione**: Avviare scansione tramite API
-4. **Monitoraggio**: Controllare stato via polling o webhook (futuro)
+3. **Esecuzione**: Avviare scansione tramite API Gateway
+4. **Monitoraggio**: Controllare stato via polling
 5. **Risultati**: Recuperare risultati e report generati
+
+## Monitoring e Debugging
+
+### Health Checks
+- `/health/`: Base health check
+- `/health/detailed`: Health con verifica backend
+- `/health/readiness`: Per Kubernetes readiness probe
+- `/health/liveness`: Per Kubernetes liveness probe
+
+### Logs
+- I log dell'API Gateway contengono tutte le richieste con timing e dettagli
+- Ogni richiesta ha un ID univoco per tracciamento
+- Errori di comunicazione backend sono loggati separatamente
+
+### Troubleshooting
+1. Verificare stato gateway: `GET /health/detailed`
+2. Controllare logs del container: `docker-compose logs api_gateway`
+3. Verificare connettività backend: `GET /health/readiness`

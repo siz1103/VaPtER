@@ -1,5 +1,3 @@
-# vapt_project_root/docker-compose.yml
-
 version: '3.8'
 
 services:
@@ -47,7 +45,7 @@ services:
       - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-in-production}
       - DATABASE_URL=postgresql://${POSTGRES_USER:-vapter}:${POSTGRES_PASSWORD:-vapter123}@db:5432/${POSTGRES_DB:-vapter}
       - RABBITMQ_URL=amqp://${RABBITMQ_USER:-vapter}:${RABBITMQ_PASSWORD:-vapter123}@rabbitmq:5672/
-      - INTERNAL_API_GATEWAY_URL=http://backend:8000
+      - INTERNAL_API_GATEWAY_URL=http://api_gateway:8080
       - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-http://vapter.szini.it:3000,http://localhost:3000}
     volumes:
       - ./backend:/app
@@ -61,7 +59,8 @@ services:
       - vapter_network
     restart: unless-stopped
     command: >
-      sh -c "python manage.py migrate &&
+      sh -c "python manage.py makemigrations orchestrator_api &&
+             python manage.py migrate &&
              python manage.py collectstatic --noinput &&
              python manage.py loaddata initial_data.json &&
              python manage.py runserver 0.0.0.0:8000"
@@ -89,20 +88,42 @@ services:
     restart: unless-stopped
     command: python manage.py consume_scan_status
 
-  # FastAPI Gateway (will be implemented in next phase)
-  # api_gateway:
+  # FastAPI Gateway
+  api_gateway:
+    build:
+      context: ./api_gateway
+      dockerfile: Dockerfile
+    container_name: vapter_api_gateway
+    environment:
+      - DEBUG=${DEBUG:-True}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - BACKEND_URL=http://backend:8000
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-http://vapter.szini.it:3000,http://localhost:3000}
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-in-production}
+    volumes:
+      - ./api_gateway:/app
+    ports:
+      - "8080:8080"
+    depends_on:
+      - backend
+    networks:
+      - vapter_network
+    restart: unless-stopped
+
+  # React Frontend (will be implemented in next phase)
+  # frontend:
   #   build:
-  #     context: ./api_gateway
+  #     context: ./frontend
   #     dockerfile: Dockerfile
-  #   container_name: vapter_api_gateway
+  #   container_name: vapter_frontend
   #   environment:
-  #     - BACKEND_URL=http://backend:8000
+  #     - REACT_APP_API_URL=http://vapter.szini.it:8080
   #   volumes:
-  #     - ./api_gateway:/app
+  #     - ./frontend:/app
   #   ports:
-  #     - "8080:8080"
+  #     - "3000:3000"
   #   depends_on:
-  #     - backend
+  #     - api_gateway
   #   networks:
   #     - vapter_network
   #   restart: unless-stopped
