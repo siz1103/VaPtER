@@ -142,23 +142,26 @@ services:
     # Network mode for scanning (optional - use host mode for better network access)
     # network_mode: host  # Uncomment if needed for advanced scanning
 
-  # React Frontend (will be implemented in next phase)
-  # frontend:
-  #   build:
-  #     context: ./frontend
-  #     dockerfile: Dockerfile
-  #   container_name: vapter_frontend
-  #   environment:
-  #     - REACT_APP_API_URL=http://vapter.szini.it:8080
-  #   volumes:
-  #     - ./frontend:/app
-  #   ports:
-  #     - "3000:3000"
-  #   depends_on:
-  #     - api_gateway
-  #   networks:
-  #     - vapter_network
-  #   restart: unless-stopped
+
+  # React Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: vapter_frontend
+    environment:
+      - REACT_APP_API_URL=${EXTERNAL_GATEWAY_URL:-http://localhost:8080}
+      - NODE_ENV=development
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api_gateway
+    networks:
+      - vapter_network
+    restart: unless-stopped
 
 volumes:
   postgres_data:
