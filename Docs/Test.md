@@ -649,12 +649,12 @@ docker-compose logs -f nmap_scanner
 - [X] API Scansioni funzionante tramite Gateway
 - [X] Validazioni funzionanti
 - [X] RabbitMQ accessibile e consumer attivo
-- [ ] Filtri e ricerca funzionanti tramite Gateway
-- [ ] Documentazione API Gateway accessibile
-- [ ] Logging Gateway funzionante
+- [X] Filtri e ricerca funzionanti tramite Gateway
+- [X] Documentazione API Gateway accessibile
+- [X] Logging Gateway funzionante
 - [X] Test di performance base superati
-- [ ] Headers personalizzati del gateway presenti
-- [ ] Gestione errori del gateway corretta
+- [X] Headers personalizzati del gateway presenti
+- [X] Gestione errori del gateway corretta
 - [ ] Modulo Nmap Scanner avviato e connesso a RabbitMQ
 - [ ] Test nmap installation nel container
 - [ ] Workflow completo di scansione funzionante
