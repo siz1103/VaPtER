@@ -150,11 +150,11 @@ services:
       dockerfile: Dockerfile
     container_name: vapter_frontend
     environment:
-      - REACT_APP_API_URL=http://vapter.szini.it:8080
+      - REACT_APP_API_URL=${EXTERNAL_GATEWAY_URL:-http://localhost:8080}
       - NODE_ENV=development
     volumes:
       - ./frontend:/app
-      #- /app/node_modules
+      - /app/node_modules
     ports:
       - "3000:3000"
     depends_on:
