@@ -158,7 +158,9 @@ class NmapScanner:
                 
                 if ports:
                     cmd.extend(['-p', ','.join(ports)])
+                    cmd.extend(['--open'])
                 else:
+                    cmd.extend(['--open'])
                     logger.warning("No ports specified in port_list, using default ports")
             else:
                 logger.info("No port_list specified, using default ports")
