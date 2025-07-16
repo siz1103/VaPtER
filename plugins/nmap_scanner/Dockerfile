@@ -38,6 +38,9 @@ RUN mkdir -p /tmp/nmap_results && \
 RUN useradd -m -u 1000 nmap_user && \
     chown -R nmap_user:nmap_user /app /tmp/nmap_results
 
+# Set capabilities for nmap binary to allow raw socket operations
+RUN setcap cap_net_raw,cap_net_admin,cap_net_bind_service+eip /usr/bin/nmap
+
 # Switch to non-root user
 USER nmap_user
 
