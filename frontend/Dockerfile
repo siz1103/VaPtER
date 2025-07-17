@@ -12,6 +12,9 @@ RUN npm install
 # Copy application files
 COPY . .
 
+# Create necessary directories if they don't exist
+RUN sh -c 'if [ -f create-directories.sh ]; then sh create-directories.sh; fi'
+
 # Expose port
 EXPOSE 3000
 

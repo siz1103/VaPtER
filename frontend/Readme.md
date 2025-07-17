@@ -1,5 +1,3 @@
-# frontend/README.md
-
 # VaPtER Frontend
 
 Frontend React per la piattaforma VaPtER di Vulnerability Assessment.
@@ -72,14 +70,17 @@ Il proxy per le API è configurato in `vite.config.ts`:
 ## Prossimi Step
 
 - [x] Setup iniziale e configurazione
-- [ ] Implementazione componenti UI base
-- [ ] Layout principale con Header e Sidebar
-- [ ] Gestione stato con Zustand
-- [ ] Integrazione API services
-- [ ] Pagine principali (Dashboard, Targets, Scans)
-- [ ] Gestione Customer con dropdown
-- [ ] Modal per CRUD operations
+- [x] Implementazione componenti UI base
+- [x] Layout principale con Header e Sidebar
+- [x] Gestione stato con Zustand
+- [x] Integrazione API services (customer service)
+- [x] Pagina Dashboard base
+- [x] Gestione Customer con dropdown
+- [x] Modal per creazione customer
+- [ ] Pagine Targets e Scans complete
+- [ ] Pagine Settings (Port Lists, Scan Types)
 - [ ] Polling per aggiornamenti scansioni
+- [ ] Gestione errori e loading states
 
 ## Note di Sviluppo
 

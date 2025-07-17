@@ -1,13 +1,24 @@
+import { Routes, Route } from 'react-router-dom'
+import { Toaster } from '@/components/ui/toaster'
+import Layout from '@/components/layout/Layout'
+import Dashboard from '@/pages/Dashboard'
+
 function App() {
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <div className="container mx-auto p-8">
-        <h1 className="text-4xl font-bold mb-4">VaPtER</h1>
-        <p className="text-muted-foreground">
-          Vulnerability Assessment Platform - Frontend in development
-        </p>
-      </div>
-    </div>
+    <>
+      <Routes>
+        <Route path="/" element={<Layout />}>
+          <Route index element={<Dashboard />} />
+          <Route path="targets" element={<div className="p-6">Targets Page (Coming Soon)</div>} />
+          <Route path="scans" element={<div className="p-6">Scans Page (Coming Soon)</div>} />
+          <Route path="settings">
+            <Route path="port-lists" element={<div className="p-6">Port Lists (Coming Soon)</div>} />
+            <Route path="scan-types" element={<div className="p-6">Scan Types (Coming Soon)</div>} />
+          </Route>
+        </Route>
+      </Routes>
+      <Toaster />
+    </>
   )
 }
 
