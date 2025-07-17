@@ -58,6 +58,42 @@ docker-compose exec backend python manage.py createsuperuser
 
 ## 🧪 Test dei Componenti
 
+### 0. Test Frontend React
+
+#### Verificare Frontend Status
+
+```bash
+# Verificare che il container frontend sia attivo
+docker-compose ps frontend
+
+# Verificare logs del frontend
+docker-compose logs frontend
+
+# Test accesso al frontend
+curl -I http://vapter.szini.it:3000/
+
+# Aprire il browser e navigare a
+# http://vapter.szini.it:3000/
+```
+
+**Verifiche da fare nel browser:**
+1. La pagina si carica correttamente con tema dark
+2. Il layout mostra header e sidebar
+3. Il dropdown dei customer è visibile nell'header
+4. La navigazione tra le pagine funziona
+5. I modali si aprono correttamente
+
+#### Test Proxy API dal Frontend
+
+```bash
+# Verificare che il frontend possa comunicare con l'API Gateway
+docker-compose exec frontend wget -qO- http://api_gateway:8080/health/
+
+# Verificare nei Developer Tools del browser (F12)
+# - Network tab: le chiamate API vanno a /api/...
+# - Console: nessun errore CORS
+```
+
 ### 1. Test API Gateway
 
 #### Verificare API Gateway Status
@@ -639,6 +675,10 @@ docker-compose logs -f nmap_scanner
 
 ## ✅ Checklist Test Completo
 
+- [X] Frontend React avviato e accessibile
+- [X] Layout con tema dark funzionante
+- [X] Navigazione tra pagine funzionante
+- [X] Comunicazione Frontend -> API Gateway funzionante
 - [X] Servizi Docker tutti avviati (incluso API Gateway e Nmap Scanner)
 - [X] API Gateway health check OK
 - [X] Gateway comunica correttamente con backend

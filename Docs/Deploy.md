@@ -77,9 +77,9 @@ L'obiettivo è avere una base dati e un'interfaccia utente minima per gestire i 
 
 4. **Frontend :**
 
-- prima di tutto decidere il framework da utilizzare
-- Creare l'interfaccia utente base per aggiungere i dati e avviare le prime scansioni
-- Aggiungere un menù a tendina che elenchi i customer e permetta di crearne di nuovi.
+- prima di tutto decidere il framework da utilizzare **fatto**
+- Creare l'interfaccia utente base per aggiungere i dati e avviare le prime scansioni**fatto**
+- Aggiungere un menù a tendina che elenchi i customer e permetta di crearne di nuovi.**fatto**
 - I dati nelle pagine target e scansioni dovranno mostrare solo i dati dello specifico customer selezionato
 - Fornire un'interfaccia per avviare una scansione selezionando un target precedentemente aggiunto e un tipo di scansione.
 - Creare una pagina per visualizzare l'elenco delle scansioni avviate e il loro stato.

@@ -122,6 +122,40 @@ curl -H "Origin: http://localhost:3000" \
 docker-compose exec api_gateway python -c "from app.config import settings; print(f'Backend URL: {settings.BACKEND_URL}, Timeout: {settings.BACKEND_TIMEOUT}')"
 ```
 
+### Comandi Frontend
+
+#### Gestione Frontend Development
+
+```bash
+# Accedere al container frontend
+docker-compose exec frontend sh
+
+# Verificare logs del frontend
+docker-compose logs -f frontend
+
+# Rebuild frontend dopo modifiche a package.json
+docker-compose build frontend && docker-compose up -d frontend
+
+# Verificare che il frontend sia raggiungibile
+curl http://vapter.szini.it:3000/
+
+# Test proxy API dal frontend al gateway
+docker-compose exec frontend wget -O- http://api_gateway:8080/health/
+```
+
+#### Sviluppo Frontend
+
+```bash
+# Installare una nuova dipendenza nel frontend
+docker-compose exec frontend npm install nome-pacchetto
+
+# Verificare errori TypeScript
+docker-compose exec frontend npm run build
+
+# Verificare lint
+docker-compose exec frontend npm run lint
+```
+
 ### Comandi di Sviluppo
 
 #### Debugging e Sviluppo
