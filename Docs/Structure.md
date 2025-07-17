@@ -127,18 +127,24 @@ vapt_project_root/
 - **Admin Interface**: Django admin configurato per tutti i models
 - **Logging & Monitoring**: Sistema di logging centralizzato nell'API Gateway
 
+
 ### 🚧 IN SVILUPPO
-- **Frontend React**: Setup iniziale completato, componenti UI in sviluppo
+- **Frontend React**: Layout principale e componenti base completati
   - ✅ Configurazione base (React + TypeScript + Vite)
   - ✅ Integrazione shadcn/ui e Tailwind CSS
   - ✅ Tema dark con palette di grigi
   - ✅ Struttura routing e layout base
   - ✅ Configurazione API client (axios)
   - ✅ Type definitions per tutti i modelli
-  - ❌ Componenti UI (in sviluppo)
-  - ❌ Pagine principali (Dashboard, Targets, Scans, Settings)
-  - ❌ Gestione stato con Zustand
-  - ❌ Integrazione completa con API Gateway
+  - ✅ Componenti UI base (Button, Card, Dialog, Input, etc.)
+  - ✅ Layout con Header e Sidebar
+  - ✅ Gestione stato con Zustand
+  - ✅ Customer dropdown con creazione
+  - ✅ Dashboard page base
+  - ✅ Customer service API integration
+  - ❌ Pagine Settings (Port Lists, Scan Types) (da sviluppare)
+  - ❌ Pagine Targets e Scans (da sviluppare)
+  - ❌ Polling per aggiornamenti scansioni (da sviluppare)
 
 ### ✅ API Gateway - Caratteristiche Implementate
 - **Reverse Proxy**: Tutti gli endpoint del backend accessibili tramite gateway

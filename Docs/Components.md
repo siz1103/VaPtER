@@ -8,7 +8,7 @@ La piattaforma sarà composta da un insieme di microservizi containerizzati, orc
 2. [Stack tecnologico](#stack-tecnologico-per-servizio)
 
 ## Spiegazione base
-- **Frontend (UI):** Da decidere
+- **Frontend (UI):** (React + TypeScript + Vite)
 
 - **API Gateway:** Python con FastAPI
 
@@ -47,7 +47,8 @@ La piattaforma sarà composta da un insieme di microservizi containerizzati, orc
 *   **Coda di Messaggi:**
     *   Linguaggio/Framework: RabbitMQ
 *   **Frontend (UI):**
-    *   Linguaggio/Framework: Da decidere
+    *   Linguaggio/Framework: (React + TypeScript + Vite)
+    *   Integrazioni: shadcn/ui ,Tailwind CSS e Zustand
 *   **Database:**
     *   Sistema: PostgreSQL
 *   **Report generator:**
