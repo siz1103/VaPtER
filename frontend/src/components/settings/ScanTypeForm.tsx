@@ -70,6 +70,8 @@ export default function ScanTypeForm({ scanType, onSuccess, onCancel }: ScanType
   
   const mutation = useMutation({
     mutationFn: async (data: typeof formData) => {
+      console.log('Mutation starting with data:', data) // Debug log
+      
       // Pulisci i dati prima dell'invio
       const cleanData = { ...data }
       if (cleanData.only_discovery) {
@@ -80,6 +82,8 @@ export default function ScanTypeForm({ scanType, onSuccess, onCancel }: ScanType
         cleanData.plugin_vuln_lookup = false
       }
       
+      console.log('Clean data to send:', cleanData) // Debug log
+      
       if (isEditing) {
         return updateScanType(scanType.id, cleanData)
       } else {
@@ -87,6 +91,7 @@ export default function ScanTypeForm({ scanType, onSuccess, onCancel }: ScanType
       }
     },
     onSuccess: (data) => {
+      console.log('Mutation success:', data) // Debug log
       queryClient.invalidateQueries({ queryKey: ['scanTypes'] })
       toast({
         title: isEditing ? 'Scan Type updated' : 'Scan Type created',
@@ -95,6 +100,7 @@ export default function ScanTypeForm({ scanType, onSuccess, onCancel }: ScanType
       onSuccess(data)
     },
     onError: (error: any) => {
+      console.error('Mutation error:', error) // Debug log
       toast({
         title: 'Error',
         description: error.response?.data?.detail || `Failed to ${isEditing ? 'update' : 'create'} scan type`,
@@ -105,6 +111,9 @@ export default function ScanTypeForm({ scanType, onSuccess, onCancel }: ScanType
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    console.log('Form submitted!') // Debug log
+    console.log('Form data:', formData) // Debug log
+    
     if (!formData.name.trim()) {
       toast({
         title: 'Error',
@@ -118,17 +127,19 @@ export default function ScanTypeForm({ scanType, onSuccess, onCancel }: ScanType
   }
   
   const handleChange = (field: keyof typeof formData) => (value: any) => {
+    console.log(`Changing ${field} to:`, value) // Debug log
     setFormData(prev => ({ ...prev, [field]: value }))
   }
   
   const handleInputChange = (field: keyof typeof formData) => 
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      console.log(`Input change ${field} to:`, e.target.value) // Debug log
       setFormData(prev => ({ ...prev, [field]: e.target.value }))
     }
   
   return (
-    <form onSubmit={handleSubmit}>
-      <DialogContent className="sm:max-w-[600px]">
+    <DialogContent className="sm:max-w-[600px]">
+      <form onSubmit={handleSubmit} id="scan-type-form">
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Edit Scan Type' : 'Create New Scan Type'}</DialogTitle>
           <DialogDescription>
@@ -210,7 +221,10 @@ export default function ScanTypeForm({ scanType, onSuccess, onCancel }: ScanType
             <Label htmlFor="port_list">Port List</Label>
             <Select
               value={formData.port_list?.toString() || ''}
-              onValueChange={(value) => handleChange('port_list')(value ? parseInt(value) : undefined)}
+              onValueChange={(value) => {
+                console.log('Port list selected:', value) // Debug log
+                handleChange('port_list')(value ? parseInt(value) : undefined)
+              }}
               disabled={formData.only_discovery}
             >
               <SelectTrigger>
@@ -291,17 +305,28 @@ export default function ScanTypeForm({ scanType, onSuccess, onCancel }: ScanType
         </div>
         
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={onCancel}>
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={() => {
+              console.log('Cancel clicked') // Debug log
+              onCancel()
+            }}
+          >
             Cancel
           </Button>
-          <Button type="submit" disabled={mutation.isPending}>
+          <Button 
+            type="submit" 
+            form="scan-type-form"
+            disabled={mutation.isPending}
+          >
             {mutation.isPending
               ? (isEditing ? 'Updating...' : 'Creating...')
               : (isEditing ? 'Update' : 'Create')
             }
           </Button>
         </DialogFooter>
-      </DialogContent>
-    </form>
+      </form>
+    </DialogContent>
   )
 }
