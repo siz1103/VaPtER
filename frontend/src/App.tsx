@@ -1,30 +1,13 @@
-// frontend/src/App.tsx
-
-import { Routes, Route } from 'react-router-dom'
-import { Toaster } from '@/components/ui/toaster'
-import Layout from '@/components/layout/Layout'
-import Dashboard from '@/pages/Dashboard'
-import Targets from '@/pages/Targets'
-import Scans from '@/pages/Scans'
-import PortLists from '@/pages/settings/PortLists'
-import ScanTypes from '@/pages/settings/ScanTypes'
-
 function App() {
   return (
-    <>
-      <Routes>
-        <Route path="/" element={<Layout />}>
-          <Route index element={<Dashboard />} />
-          <Route path="targets" element={<Targets />} />
-          <Route path="scans" element={<Scans />} />
-          <Route path="settings">
-            <Route path="port-lists" element={<PortLists />} />
-            <Route path="scan-types" element={<ScanTypes />} />
-          </Route>
-        </Route>
-      </Routes>
-      <Toaster />
-    </>
+    <div className="min-h-screen bg-background text-foreground">
+      <div className="container mx-auto p-8">
+        <h1 className="text-4xl font-bold mb-4">VaPtER</h1>
+        <p className="text-muted-foreground">
+          Vulnerability Assessment Platform - Frontend in development
+        </p>
+      </div>
+    </div>
   )
 }
 
