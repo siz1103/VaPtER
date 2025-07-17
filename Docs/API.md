@@ -197,9 +197,16 @@ Ottenere statistiche del cliente.
 #### GET /api/orchestrator/port-lists/
 Ottenere lista delle configurazioni di porte.
 
+**Parametri Query:**
+- `search`: Ricerca per nome, descrizione, tcp_ports, udp_ports
+- `name`: Filtra per nome (contiene)
+- `page`: Numero di pagina
+- `page_size`: Elementi per pagina (default: 20)
+
 **Risposta:**
 ```json
 {
+  "count": 5,
   "results": [
     {
       "id": 1,
@@ -209,7 +216,8 @@ Ottenere lista delle configurazioni di porte.
       "description": "Porte TCP più comuni",
       "total_tcp_ports": 7,
       "total_udp_ports": 0,
-      "created_at": "2025-01-01T10:00:00Z"
+      "created_at": "2025-01-01T10:00:00Z",
+      "updated_at": "2025-01-01T10:00:00Z"
     }
   ]
 }
@@ -228,20 +236,42 @@ Creare una nuova lista di porte.
 }
 ```
 
+**Validazione:**
+- `name`: Obbligatorio, max 50 caratteri
+- `tcp_ports`: Opzionale, formato: "22,80,443" o "1-1000" o combinazioni
+- `udp_ports`: Opzionale, stesso formato di tcp_ports
+- Almeno uno tra `tcp_ports` e `udp_ports` deve essere specificato
+- Le porte devono essere nel range 1-65535
+
+#### GET /api/orchestrator/port-lists/{id}/
+Ottenere dettagli di una lista di porte specifica.
+
+#### PUT/PATCH /api/orchestrator/port-lists/{id}/
+Aggiornare una lista di porte.
+
+#### DELETE /api/orchestrator/port-lists/{id}/
+Eliminare una lista di porte (soft delete).
+
+**Note:** La cancellazione fallirà se la lista è utilizzata da scan types esistenti.
+
 ### 3. Scan Types
 
 #### GET /api/orchestrator/scan-types/
 Ottenere lista dei tipi di scansione.
 
 **Parametri Query:**
+- `search`: Ricerca per nome, descrizione, configurazione
 - `with_finger`: Filtra per scan types con fingerprinting
 - `with_enum`: Filtra per scan types con enumerazione
 - `with_web`: Filtra per scan types con web scanning
 - `with_vuln`: Filtra per scan types con vulnerability lookup
+- `page`: Numero di pagina
+- `page_size`: Elementi per pagina (default: 20)
 
 **Risposta:**
 ```json
 {
+  "count": 6,
   "results": [
     {
       "id": 1,
@@ -256,7 +286,9 @@ Ottenere lista dei tipi di scansione.
       "plugin_web": false,
       "plugin_vuln_lookup": false,
       "description": "Scansione di discovery",
-      "enabled_plugins": []
+      "enabled_plugins": [],
+      "created_at": "2025-01-01T10:00:00Z",
+      "updated_at": "2025-01-01T10:00:00Z"
     }
   ]
 }
@@ -264,6 +296,38 @@ Ottenere lista dei tipi di scansione.
 
 #### POST /api/orchestrator/scan-types/
 Creare un nuovo tipo di scansione.
+
+**Body:**
+```json
+{
+  "name": "Custom Scan Type",
+  "only_discovery": false,
+  "consider_alive": false,
+  "be_quiet": false,
+  "port_list": 2,
+  "plugin_finger": true,
+  "plugin_enum": false,
+  "plugin_web": false,
+  "plugin_vuln_lookup": true,
+  "description": "Tipo di scansione personalizzato"
+}
+```
+
+**Validazione:**
+- `name`: Obbligatorio, max 50 caratteri, univoco
+- Se `only_discovery` è true, `port_list` deve essere null e tutti i plugin devono essere false
+- `port_list`: Deve esistere se specificato
+
+#### GET /api/orchestrator/scan-types/{id}/
+Ottenere dettagli di un tipo di scansione specifico.
+
+#### PUT/PATCH /api/orchestrator/scan-types/{id}/
+Aggiornare un tipo di scansione.
+
+#### DELETE /api/orchestrator/scan-types/{id}/
+Eliminare un tipo di scansione (soft delete).
+
+**Note:** La cancellazione fallirà se il tipo è utilizzato da scansioni esistenti.
 
 ### 4. Targets
 
@@ -464,18 +528,34 @@ curl -X POST http://vapter.szini.it:8080/api/orchestrator/customers/ \
   -H "Content-Type: application/json" \
   -d '{"name": "Test Corp", "email": "test@testcorp.com"}'
 
-# 3. Creare un target
+# 3. Creare una lista di porte
+curl -X POST http://vapter.szini.it:8080/api/orchestrator/port-lists/ \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Web Ports", "tcp_ports": "80,443,8080,8443", "description": "Common web ports"}'
+
+# 4. Creare un tipo di scansione
+curl -X POST http://vapter.szini.it:8080/api/orchestrator/scan-types/ \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Web Scan", "port_list": 1, "plugin_web": true, "description": "Web application scan"}'
+
+# 5. Creare un target
 curl -X POST http://vapter.szini.it:8080/api/orchestrator/targets/ \
   -H "Content-Type: application/json" \
   -d '{"customer": "customer-uuid", "name": "Web Server", "address": "192.168.1.100"}'
 
-# 4. Avviare una scansione
+# 6. Avviare una scansione
 curl -X POST http://vapter.szini.it:8080/api/orchestrator/targets/1/scan/ \
   -H "Content-Type: application/json" \
   -d '{"scan_type_id": 2}'
 
-# 5. Monitorare la scansione
+# 7. Monitorare la scansione
 curl http://vapter.szini.it:8080/api/orchestrator/scans/1/
+
+# 8. Filtrare port lists
+curl "http://vapter.szini.it:8080/api/orchestrator/port-lists/?search=web"
+
+# 9. Filtrare scan types con plugin web
+curl "http://vapter.szini.it:8080/api/orchestrator/scan-types/?with_web=true"
 ```
 
 ### Accesso Diretto Backend (Solo Development)
@@ -485,13 +565,30 @@ curl http://vapter.szini.it:8080/api/orchestrator/scans/1/
 curl http://vapter.szini.it:8000/api/orchestrator/customers/
 ```
 
+## Nuove Funzionalità Settings
+
+### Port Lists
+- CRUD completo per gestione liste di porte
+- Validazione formato porte (singole, range, combinazioni)
+- Conteggio automatico numero porte
+- Controllo dipendenze con Scan Types
+
+### Scan Types
+- CRUD completo per gestione tipi di scansione
+- Logica `only_discovery` che disabilita configurazioni avanzate
+- Gestione plugin opzionali
+- Integrazione con Port Lists
+- Configurazioni per timing e comportamento scan
+
 ## Workflow Tipico
 
-1. **Setup iniziale**: Creare cliente e target tramite API Gateway
-2. **Configurazione**: Scegliere tipo di scansione appropriato
-3. **Esecuzione**: Avviare scansione tramite API Gateway
-4. **Monitoraggio**: Controllare stato via polling
-5. **Risultati**: Recuperare risultati e report generati
+1. **Setup iniziale**: Creare cliente e configurazioni
+2. **Configurazione Port Lists**: Definire gruppi di porte standard
+3. **Configurazione Scan Types**: Creare template di scansione
+4. **Gestione Target**: Aggiungere target da scansionare
+5. **Esecuzione**: Avviare scansione tramite API Gateway
+6. **Monitoraggio**: Controllare stato via polling
+7. **Risultati**: Recuperare risultati e report generati
 
 ## Monitoring e Debugging
 

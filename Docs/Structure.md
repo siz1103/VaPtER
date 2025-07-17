@@ -46,26 +46,61 @@ vapt_project_root/
 │   │       └── logging.py          # Request logging middleware
 │   ├── Dockerfile                  # Docker configuration for API Gateway
 │   └── requirements.txt            # Python dependencies
-├── frontend/                        # ✅ IN IMPLEMENTAZIONE - React + shadcn/ui
+├── frontend/                        # ✅ COMPLETATO - React + shadcn/ui
 │   ├── src/                         # Source code
 │   │   ├── components/              # React components
 │   │   │   ├── layout/              # Layout components
+│   │   │   │   ├── Layout.tsx       # Main layout component
+│   │   │   │   ├── Header.tsx       # Header with customer dropdown
+│   │   │   │   ├── Sidebar.tsx      # Navigation sidebar
+│   │   │   │   └── CustomerDropdown.tsx # Customer selection
+│   │   │   ├── customers/           # Customer-related components
+│   │   │   │   └── CustomerForm.tsx # Customer form modal
+│   │   │   ├── settings/            # ✅ NUOVO - Settings components
+│   │   │   │   ├── PortListForm.tsx     # Port list form modal
+│   │   │   │   ├── PortListTable.tsx    # Port list data table
+│   │   │   │   ├── ScanTypeForm.tsx     # Scan type form modal
+│   │   │   │   └── ScanTypeTable.tsx    # Scan type data table
 │   │   │   └── ui/                  # shadcn/ui components
+│   │   │       ├── button.tsx
+│   │   │       ├── card.tsx
+│   │   │       ├── dialog.tsx
+│   │   │       ├── dropdown-menu.tsx
+│   │   │       ├── input.tsx
+│   │   │       ├── label.tsx
+│   │   │       ├── textarea.tsx
+│   │   │       ├── toast.tsx
+│   │   │       ├── toaster.tsx
+│   │   │       ├── use-toast.ts
+│   │   │       ├── switch.tsx       # ✅ NUOVO - Switch component
+│   │   │       ├── select.tsx       # ✅ NUOVO - Select component
+│   │   │       ├── table.tsx        # ✅ NUOVO - Table component
+│   │   │       ├── alert-dialog.tsx # ✅ NUOVO - Alert dialog component
+│   │   │       └── badge.tsx        # ✅ NUOVO - Badge component
 │   │   ├── hooks/                   # Custom React hooks
+│   │   │   └── .gitkeep
 │   │   ├── lib/                     # Utilities and helpers
 │   │   │   ├── api.ts               # API client configuration
 │   │   │   └── utils.ts             # Utility functions
 │   │   ├── pages/                   # Page components
-│   │   │   └── settings/            # Settings pages
+│   │   │   ├── Dashboard.tsx        # Dashboard page
+│   │   │   └── settings/            # ✅ NUOVO - Settings pages
+│   │   │       ├── PortLists.tsx    # Port lists management page
+│   │   │       └── ScanTypes.tsx    # Scan types management page
 │   │   ├── services/                # API service layer
+│   │   │   ├── customerService.ts   # Customer API calls
+│   │   │   ├── portListService.ts   # ✅ NUOVO - Port list API calls
+│   │   │   └── scanTypeService.ts   # ✅ NUOVO - Scan type API calls
 │   │   ├── store/                   # Zustand state management
+│   │   │   └── customerStore.ts     # Customer global state
 │   │   ├── types/                   # TypeScript type definitions
-│   │   ├── App.tsx                  # Main App component
+│   │   │   └── index.ts             # All model types
+│   │   ├── App.tsx                  # ✅ AGGIORNATO - Main App with settings routes
 │   │   ├── index.css                # Global styles + Tailwind
 │   │   ├── main.tsx                 # Application entry point
 │   │   └── vite-env.d.ts            # Vite type definitions
 │   ├── index.html                   # HTML entry point
-│   ├── package.json                 # Dependencies and scripts
+│   ├── package.json                 # ✅ AGGIORNATO - Dependencies and scripts
 │   ├── tsconfig.json                # TypeScript configuration
 │   ├── tsconfig.node.json           # TypeScript config for Vite
 │   ├── vite.config.ts               # Vite configuration
@@ -73,7 +108,9 @@ vapt_project_root/
 │   ├── postcss.config.js            # PostCSS configuration
 │   ├── .eslintrc.cjs                # ESLint configuration
 │   ├── .gitignore                   # Git ignore rules
-│   └── Dockerfile                   # Docker configuration
+│   ├── Dockerfile                   # Docker configuration
+│   ├── create-directories.sh        # Directory creation script
+│   └── Readme.md                    # Frontend documentation
 ├── plugins/                         # ❌ DA COMPLETARE - Scanner modules
 │   ├── nmap_scanner/               # ✅ IMPLEMENTATO- Nmap scanning module
 │   │   ├── __init__.py            # Package initialization
@@ -88,7 +125,7 @@ vapt_project_root/
 │   ├── vuln_lookup/                # ❌ DA IMPLEMENTARE - Vulnerability lookup module
 │   └── report_generator/           # ❌ DA IMPLEMENTARE - Report generation module
 ├── Docs/                           # Cartella contenente tutti i file .md
-│   ├── API.md                      # ✅ DA AGGIORNARE - Documentazione API
+│   ├── API.md                      # ✅ AGGIORNATO - Documentazione API con Settings
 │   ├── Components.md               # Spiegazione tecnologie scelte
 │   ├── Deploy.md                   # Indicazioni sulle fasi di sviluppo
 │   ├── ENV.md                      # ✅ AGGIORNATO - Documentazione ENV utilizzate
@@ -115,87 +152,129 @@ vapt_project_root/
 - **Admin Interface**: Django admin configurato per tutti i models
 - **Logging & Monitoring**: Sistema di logging centralizzato nell'API Gateway
 
-### ✅ COMPLETATO
-- **Backend Django Orchestrator**: Completo con models, API, admin, services
-- **Database Models**: Customer, PortList, ScanType, Target, Scan, ScanDetail
-- **API REST**: CRUD completo per tutti i models con filtri e paginazione
-- **RabbitMQ Integration**: Services per publishing e consumer per status updates
-- **API Gateway FastAPI**: Reverse proxy completo verso backend Django
-- **Nmap Scanner Module**: Modulo completo per scansioni di rete con Nmap
-- **Docker Configuration**: docker-compose.yml aggiornato con tutti i servizi
-- **Initial Data**: Fixtures con PortList e ScanType predefiniti
-- **Admin Interface**: Django admin configurato per tutti i models
-- **Logging & Monitoring**: Sistema di logging centralizzato nell'API Gateway
+### ✅ COMPLETATO - Frontend React
+- **Configurazione base**: React + TypeScript + Vite
+- **Integrazione shadcn/ui**: Tutti i componenti UI necessari implementati
+- **Tema dark**: Tema dark con palette di grigi sempre attivo
+- **Struttura routing**: Routing con React Router e layout responsive
+- **API client**: Axios configurato con interceptors e error handling
+- **Type definitions**: TypeScript types per tutti i modelli backend
+- **Layout system**: Header con customer dropdown e sidebar di navigazione
+- **State management**: Zustand per customer selection globale
+- **Dashboard**: Pagina dashboard con overview customer-specifica
+- **Customer management**: CRUD completo con validazione e toast notifications
 
+### ✅ NUOVO - Settings Pages Implementate
+- **Port Lists Management**:
+  - ✅ Pagina completa con tabella moderna e filtri dinamici
+  - ✅ Form modale per creazione/modifica con validazione ports
+  - ✅ Conteggio automatico porte (TCP/UDP)
+  - ✅ Validazione formato porte (singole, range, combinazioni)
+  - ✅ Azioni CRUD con conferma cancellazione
+  - ✅ Gestione errori per dipendenze (usato da scan types)
+  - ✅ Ricerca real-time per nome, descrizione, porte
 
-### 🚧 IN SVILUPPO
-- **Frontend React**: Layout principale e componenti base completati
-  - ✅ Configurazione base (React + TypeScript + Vite)
-  - ✅ Integrazione shadcn/ui e Tailwind CSS
-  - ✅ Tema dark con palette di grigi
-  - ✅ Struttura routing e layout base
-  - ✅ Configurazione API client (axios)
-  - ✅ Type definitions per tutti i modelli
-  - ✅ Componenti UI base (Button, Card, Dialog, Input, etc.)
-  - ✅ Layout con Header e Sidebar
-  - ✅ Gestione stato con Zustand
-  - ✅ Customer dropdown con creazione
-  - ✅ Dashboard page base
-  - ✅ Customer service API integration
-  - ❌ Pagine Settings (Port Lists, Scan Types) (da sviluppare)
-  - ❌ Pagine Targets e Scans (da sviluppare)
-  - ❌ Polling per aggiornamenti scansioni (da sviluppare)
+- **Scan Types Management**:
+  - ✅ Pagina completa con tabella avanzata e badges
+  - ✅ Form modale complesso con switch e select
+  - ✅ Logica "Discovery Only" che disabilita port lists e plugins
+  - ✅ Integrazione con Port Lists dropdown
+  - ✅ Configurazione plugin opzionali (finger, enum, web, vuln)
+  - ✅ Preview configurazione con summary
+  - ✅ Azioni CRUD con conferma cancellazione
+  - ✅ Filtri dinamici e ricerca avanzata
 
-### ✅ API Gateway - Caratteristiche Implementate
-- **Reverse Proxy**: Tutti gli endpoint del backend accessibili tramite gateway
-- **Health Checks**: Endpoint dedicati per monitoring e readiness/liveness probes
-- **Request Logging**: Middleware personalizzato per tracciare tutte le richieste
-- **Error Handling**: Gestione completa degli errori con propagazione appropriata
-- **CORS Support**: Configurazione CORS per frontend development
-- **Async Operations**: Supporto completo per operazioni asincrone
-- **Configuration Management**: Sistema di configurazione centralizzato
-- **Docker Integration**: Container completamente configurato e integrato
+- **Componenti UI Aggiunti**:
+  - ✅ Switch component per boolean values
+  - ✅ Select component con dropdown
+  - ✅ Table component responsivo e moderno
+  - ✅ AlertDialog per conferme cancellazione
+  - ✅ Badge component per status e tags
 
-### ✅ Nmap Scanner Module - Caratteristiche Implementate
-- **Network Scanning**: Scansioni di discovery, porte TCP/UDP, version detection
-- **XML Parsing**: Parser completo per output XML di Nmap
-- **RabbitMQ Integration**: Consumer per richieste e publisher per status updates
-- **API Communication**: Integrazione completa con API Gateway per parametri e risultati
-- **Error Handling**: Gestione robusta degli errori con timeout e retry logic
-- **Security**: Container basato su Kali Linux con user non-root
-- **Configuration**: Sistema di configurazione flessibile con validazione target
-- **Testing**: Suite di test completa per verificare funzionalità
+- **Services e API Integration**:
+  - ✅ portListService.ts con validazione e utilities
+  - ✅ scanTypeService.ts per tutte le operazioni CRUD
+  - ✅ Error handling e toast notifications
+  - ✅ TanStack Query per caching e sincronizzazione
+  - ✅ Invalidazione cache automatica dopo mutazioni
 
-### ❌ DA IMPLEMENTARE
+### 🚧 DA SVILUPPARE (Prossima Fase)
+- **Pagine Targets**: CRUD per target management customer-specific
+- **Pagine Scans**: Visualizzazione e gestione scansioni
+- **Polling Updates**: Real-time status updates per scansioni in corso
+- **Results Visualization**: Visualizzazione risultati scansioni
+- **Report Management**: Download e gestione report generati
+
+### ❌ DA IMPLEMENTARE (Fasi Future)
 - **Altri Scanner Modules**: Fingerprint, Enum, Web, Vuln Lookup, Report Generator
-- **Authentication**: Sistema di autenticazione (struttura predisposta)
-- **Rate Limiting**: Limitazione delle richieste (opzionale)
-- **Testing**: Unit tests e integration tests
+- **Authentication**: Sistema di autenticazione utente
+- **Permissions**: Controllo accessi e autorizzazioni
+- **Advanced Filtering**: Filtri avanzati per tutte le pagine
+- **Data Export**: Export di dati in vari formati
+- **Notifications**: Sistema di notifiche real-time
+- **Dashboards Avanzate**: Grafici e analytics
+- **API Rate Limiting**: Limitazione delle richieste
 
-## Note Tecniche
+## Note Tecniche Aggiornate
 
-### API Gateway FastAPI
-- **Framework**: FastAPI 0.109.0 con supporto asincrono
-- **HTTP Client**: httpx per comunicazione con backend
-- **Middleware**: Custom logging middleware per tracciamento richieste
-- **Configuration**: Pydantic Settings per gestione configurazioni
-- **Error Handling**: Gestione centralizzata degli errori con logging dettagliato
-- **Health Checks**: Endpoint dedicati per Kubernetes-style probes
+### Nuovi Componenti UI Implementati
+- **Switch**: Componente toggle per valori boolean con accessibilità
+- **Select**: Dropdown con search e multi-select capabilities
+- **Table**: Tabella responsiva con sorting e hover effects
+- **AlertDialog**: Dialog modali per conferme distruttive
+- **Badge**: Componenti per status, tags e categorizzazione
 
-### Comunicazione Inter-Servizi
-- **API Gateway → Backend**: HTTP/REST tramite httpx async client
-- **Backend → RabbitMQ**: pika per messaggi asincroni
-- **Scanner Modules → API Gateway**: HTTP/REST (futuro)
+### Pattern di Validazione
+- **Port Validation**: Regex e logica per validare formati porte complessi
+- **Form Validation**: Validazione real-time con feedback immediato
+- **API Error Handling**: Gestione centralizzata errori con toast notifications
 
-### URL Mapping
-- **Frontend**: http://vapter.szini.it:3000 (futuro)
-- **API Gateway**: http://vapter.szini.it:8080
-- **Backend Django**: http://vapter.szini.it:8000 (diretto + tramite gateway)
-- **RabbitMQ Management**: http://vapter.szini.it:15672
+### State Management Pattern
+- **Global State**: Zustand per customer selection
+- **Server State**: TanStack Query per API data con caching intelligente
+- **Form State**: React Hook Form per gestione form complessi
+- **UI State**: useState locale per modali e UI temporanea
+
+### Routing Architecture
+```
+/                     # Dashboard
+/targets             # Target management (da implementare)
+/scans               # Scan management (da implementare)
+/settings/port-lists # ✅ Port Lists management
+/settings/scan-types # ✅ Scan Types management
+```
+
+### API Integration Pattern
+- **Servizio Layer**: Separazione concerns tra UI e API calls
+- **Type Safety**: Tipizzazione completa per request/response
+- **Error Boundaries**: Gestione errori a livello di pagina
+- **Loading States**: Stati di caricamento consistenti
+- **Optimistic Updates**: Aggiornamenti UI ottimistici quando appropriato
+
+### Design System
+- **Color Palette**: Dark theme con grigi e accent colors
+- **Typography**: Sistema tipografico coerente
+- **Spacing**: Spacing system basato su Tailwind
+- **Components**: shadcn/ui come base per consistenza
+- **Icons**: Lucide React per iconografia moderna
+
+### Performance Optimizations
+- **Code Splitting**: Lazy loading per pagine
+- **Query Optimization**: TanStack Query con staleTime e cacheTime
+- **Bundle Size**: Tree shaking e import ottimizzati
+- **Render Optimization**: Memo e callback ottimizzazioni
+
+### URL Mapping Aggiornato
+- **Frontend**: http://vapter.szini.it:3000 ✅ ATTIVO
+- **API Gateway**: http://vapter.szini.it:8080 ✅ ATTIVO
+- **Backend Django**: http://vapter.szini.it:8000 ✅ ATTIVO
+- **RabbitMQ Management**: http://vapter.szini.it:15672 ✅ ATTIVO
 
 ### Pattern Implementati
-- **API Gateway Pattern**: Single entry point per tutti i servizi
-- **Circuit Breaker**: Timeout e retry logic nel client HTTP
-- **Centralized Logging**: Logging unificato nell'API Gateway
-- **Health Check Pattern**: Endpoint standard per monitoring
-```
+- **CRUD Operations**: Pattern consistente per tutte le entità
+- **Modal Management**: Gestione modali con state e props drilling
+- **Table Actions**: Dropdown menu pattern per azioni entità
+- **Search & Filter**: Pattern di ricerca real-time
+- **Form Handling**: Pattern validazione e submission
+- **Error Handling**: Pattern gestione errori API e UI
+- **Loading States**: Pattern loading states consistenti
