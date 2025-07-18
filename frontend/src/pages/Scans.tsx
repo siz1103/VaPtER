@@ -36,7 +36,11 @@ export default function Scans() {
     enabled: !!selectedCustomer,
     refetchInterval: (data) => {
       // Poll every 3 seconds if there are active scans
-      const hasActiveScans = data?.some(scan => isActiveScan(scan.status))
+      // Check if data is an array and has active scans
+      if (!Array.isArray(data) || data.length === 0) {
+        return false
+      }
+      const hasActiveScans = data.some(scan => isActiveScan(scan.status))
       return hasActiveScans ? 3000 : false
     },
   })
