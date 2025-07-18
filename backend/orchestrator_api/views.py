@@ -15,7 +15,7 @@ from .serializers import (
 from .filters import (
     CustomerFilter, TargetFilter, ScanFilter
 )
-from .services import ScanOrchestratorService
+from .services import ScanOrchestratorService, ScanStatusService
 
 logger = logging.getLogger(__name__)
 
@@ -249,6 +249,17 @@ class ScanViewSet(viewsets.ModelViewSet):
             scan.status = 'Failed'
             scan.error_message = f"Failed to start scan: {str(e)}"
             scan.save()
+    
+    def perform_update(self, serializer):
+        """Update scan and process results if nmap results are included"""
+        scan = serializer.save()
+        
+        # If nmap results were updated, extract scan details
+        if 'parsed_nmap_results' in serializer.validated_data and scan.parsed_nmap_results:
+            logger.info(f"Processing nmap results for scan {scan.id}")
+            ScanStatusService._extract_scan_details(scan)
+        
+        logger.info(f"Scan {scan.id} updated successfully")
     
     @action(detail=True, methods=['post'])
     def restart(self, request, pk=None):
