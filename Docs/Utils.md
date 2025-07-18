@@ -156,6 +156,42 @@ docker-compose exec frontend npm run build
 docker-compose exec frontend npm run lint
 ```
 
+Aggiungo comandi utili per Targets:
+
+### Test Targets
+
+#### Creazione Target
+```bash
+# Creare un target per un customer specifico
+curl -X POST http://vapter.szini.it:8080/api/orchestrator/targets/ \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer": "CUSTOMER_UUID_HERE",
+    "name": "Production Web Server",
+    "address": "192.168.1.100",
+    "description": "Main production web server"
+  }'
+
+# Ottenere lista targets di un customer
+curl "http://vapter.szini.it:8080/api/orchestrator/targets/?customer=CUSTOMER_UUID_HERE"
+
+# Avviare una scansione su un target
+curl -X POST http://vapter.szini.it:8080/api/orchestrator/targets/TARGET_ID/scan/ \
+  -H "Content-Type: application/json" \
+  -d '{"scan_type_id": 2}'
+
+# Nel browser console (F12)
+# Test validazione IP
+import { validateIPAddress } from '/src/services/targetService'
+console.log(validateIPAddress('192.168.1.1')) // true
+console.log(validateIPAddress('256.1.1.1')) // false
+
+# Test validazione FQDN
+import { validateFQDN } from '/src/services/targetService'
+console.log(validateFQDN('example.com')) // true
+console.log(validateFQDN('example..com')) // false
+
+
 ### Comandi di Sviluppo
 
 #### Debugging e Sviluppo
