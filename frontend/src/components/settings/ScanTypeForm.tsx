@@ -70,6 +70,8 @@ export default function ScanTypeForm({ scanType, onSuccess, onCancel }: ScanType
   
   const mutation = useMutation({
     mutationFn: async (data: typeof formData) => {
+      console.log('Mutation starting with data:', data) // Debug log
+      
       // Pulisci i dati prima dell'invio
       const cleanData = { ...data }
       if (cleanData.only_discovery) {
@@ -80,6 +82,8 @@ export default function ScanTypeForm({ scanType, onSuccess, onCancel }: ScanType
         cleanData.plugin_vuln_lookup = false
       }
       
+      console.log('Clean data to send:', cleanData) // Debug log
+      
       if (isEditing) {
         return updateScanType(scanType.id, cleanData)
       } else {
@@ -87,6 +91,7 @@ export default function ScanTypeForm({ scanType, onSuccess, onCancel }: ScanType
       }
     },
     onSuccess: (data) => {
+      console.log('Mutation success:', data) // Debug log
       queryClient.invalidateQueries({ queryKey: ['scanTypes'] })
       toast({
         title: isEditing ? 'Scan Type updated' : 'Scan Type created',
@@ -95,9 +100,10 @@ export default function ScanTypeForm({ scanType, onSuccess, onCancel }: ScanType
       onSuccess(data)
     },
     onError: (error: any) => {
+      console.error('Mutation error:', error) // Debug log
       toast({
         title: 'Error',
-        description: error.response?.data?.detail || 'An error occurred. Please try again.',
+        description: error.response?.data?.detail || `Failed to ${isEditing ? 'update' : 'create'} scan type`,
         variant: 'destructive',
       })
     },
@@ -105,24 +111,35 @@ export default function ScanTypeForm({ scanType, onSuccess, onCancel }: ScanType
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    console.log('Form submitted!') // Debug log
+    console.log('Form data:', formData) // Debug log
+    
+    if (!formData.name.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Scan type name is required',
+        variant: 'destructive',
+      })
+      return
+    }
+    
     mutation.mutate(formData)
   }
   
-  const handleChange = (field: keyof typeof formData) => (
-    value: any
-  ) => {
+  const handleChange = (field: keyof typeof formData) => (value: any) => {
+    console.log(`Changing ${field} to:`, value) // Debug log
     setFormData(prev => ({ ...prev, [field]: value }))
   }
   
-  const handleInputChange = (field: keyof typeof formData) => (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    setFormData(prev => ({ ...prev, [field]: e.target.value }))
-  }
+  const handleInputChange = (field: keyof typeof formData) => 
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      console.log(`Input change ${field} to:`, e.target.value) // Debug log
+      setFormData(prev => ({ ...prev, [field]: e.target.value }))
+    }
   
   return (
-    <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-      <form onSubmit={handleSubmit}>
+    <DialogContent className="sm:max-w-[600px]">
+      <form onSubmit={handleSubmit} id="scan-type-form">
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Edit Scan Type' : 'Create New Scan Type'}</DialogTitle>
           <DialogDescription>
@@ -204,14 +221,16 @@ export default function ScanTypeForm({ scanType, onSuccess, onCancel }: ScanType
             <Label htmlFor="port_list">Port List</Label>
             <Select
               value={formData.port_list?.toString() || ''}
-              onValueChange={(value) => handleChange('port_list')(value ? parseInt(value) : undefined)}
+              onValueChange={(value) => {
+                console.log('Port list selected:', value) // Debug log
+                handleChange('port_list')(value ? parseInt(value) : undefined)
+              }}
               disabled={formData.only_discovery}
             >
               <SelectTrigger>
-                <SelectValue placeholder={formData.only_discovery ? "Not applicable for discovery scan" : "Select a port list"} />
+                <SelectValue placeholder={formData.only_discovery ? "Not applicable for discovery scan" : "Select a port list (optional)"} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">No port list</SelectItem>
                 {portLists.map((portList) => (
                   <SelectItem key={portList.id} value={portList.id.toString()}>
                     {portList.name}
@@ -273,7 +292,7 @@ export default function ScanTypeForm({ scanType, onSuccess, onCancel }: ScanType
                   disabled={formData.only_discovery}
                 />
                 <Label htmlFor="plugin_vuln_lookup" className="text-sm">
-                  Vulnerability Lookup
+                  Vuln Lookup
                 </Label>
               </div>
             </div>
@@ -283,33 +302,28 @@ export default function ScanTypeForm({ scanType, onSuccess, onCancel }: ScanType
               </p>
             )}
           </div>
-          
-          {!formData.only_discovery && (
-            <div className="bg-muted p-3 rounded-md">
-              <p className="text-sm font-medium mb-1">Scan Summary</p>
-              <div className="text-xs text-muted-foreground space-y-1">
-                <div>Port List: {formData.port_list ? portLists.find(pl => pl.id === formData.port_list)?.name || 'Unknown' : 'Default ports'}</div>
-                <div>Host Discovery: {formData.consider_alive ? 'Disabled' : 'Enabled'}</div>
-                <div>Verbosity: {formData.be_quiet ? 'Quiet' : 'Normal'}</div>
-                <div>
-                  Plugins: {[
-                    formData.plugin_finger && 'Fingerprinting',
-                    formData.plugin_enum && 'Enumeration', 
-                    formData.plugin_web && 'Web Scanning',
-                    formData.plugin_vuln_lookup && 'Vulnerability Lookup'
-                  ].filter(Boolean).join(', ') || 'None'}
-                </div>
-              </div>
-            </div>
-          )}
         </div>
         
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={onCancel}>
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={() => {
+              console.log('Cancel clicked') // Debug log
+              onCancel()
+            }}
+          >
             Cancel
           </Button>
-          <Button type="submit" disabled={mutation.isPending}>
-            {mutation.isPending ? 'Saving...' : isEditing ? 'Update' : 'Create'}
+          <Button 
+            type="submit" 
+            form="scan-type-form"
+            disabled={mutation.isPending}
+          >
+            {mutation.isPending
+              ? (isEditing ? 'Updating...' : 'Creating...')
+              : (isEditing ? 'Update' : 'Create')
+            }
           </Button>
         </DialogFooter>
       </form>
