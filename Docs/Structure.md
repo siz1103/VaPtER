@@ -61,6 +61,10 @@ vapt_project_root/
 │   │   │   │   ├── PortListTable.tsx    # Port list data table
 │   │   │   │   ├── ScanTypeForm.tsx     # Scan type form modal
 │   │   │   │   └── ScanTypeTable.tsx    # Scan type data table
+│   │   │   ├── targets/             # ✅ NUOVO - Target-related components
+│   │   │   │   ├── TargetForm.tsx       # Target form modal con validazione IP/FQDN
+│   │   │   │   ├── TargetTable.tsx      # Target data table con azioni
+│   │   │   │   └── StartScanDialog.tsx  # Dialog per avvio scansioni
 │   │   │   └── ui/                  # shadcn/ui components
 │   │   │       ├── button.tsx
 │   │   │       ├── card.tsx
@@ -89,8 +93,9 @@ vapt_project_root/
 │   │   │       └── ScanTypes.tsx    # Scan types management page
 │   │   ├── services/                # API service layer
 │   │   │   ├── customerService.ts   # Customer API calls
-│   │   │   ├── portListService.ts   # ✅ NUOVO - Port list API calls
-│   │   │   └── scanTypeService.ts   # ✅ NUOVO - Scan type API calls
+│   │   │   ├── portListService.ts   # Port list API calls
+│   │   │   ├── scanTypeService.ts   # Scan type API calls
+│   │   │   └── targetService.ts     # ✅ NUOVO - Target API calls con validazione
 │   │   ├── store/                   # Zustand state management
 │   │   │   └── customerStore.ts     # Customer global state
 │   │   ├── types/                   # TypeScript type definitions
@@ -198,6 +203,14 @@ vapt_project_root/
   - ✅ TanStack Query per caching e sincronizzazione
   - ✅ Invalidazione cache automatica dopo mutazioni
 
+- **Targets Management**:
+  - ✅ Pagina completa con filtro per customer
+  - ✅ Form con validazione real-time IP/FQDN
+  - ✅ Tabella con status ultima scansione
+  - ✅ Azione "Start Scan" integrata
+  - ✅ Gestione customer-specific
+  - ✅ Contatori vulnerabilità e porte (placeholder)
+  
 ### 🚧 DA SVILUPPARE (Prossima Fase)
 - **Pagine Targets**: CRUD per target management customer-specific
 - **Pagine Scans**: Visualizzazione e gestione scansioni

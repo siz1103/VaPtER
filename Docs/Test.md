@@ -473,6 +473,40 @@ docker-compose logs backend_consumer
 # 5. Testare con browser zoom al 200%
 ```
 
+#### Test Customer Selection
+```bash
+# 1. Aprire http://vapter.szini.it:3000/targets senza customer selezionato
+# Verificare messaggio che invita a selezionare customer
+
+# 2. Selezionare un customer dal dropdown
+# Verificare che la pagina si carichi con i targets del customer
+```
+
+# 1. Test creazione target
+curl -X POST http://vapter.szini.it:8080/api/orchestrator/targets/ \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer": "customer-uuid",
+    "name": "Web Server Test",
+    "address": "192.168.1.100",
+    "description": "Test server"
+  }'
+
+# 2. Test validazione indirizzo (dovrebbe fallire)
+curl -X POST http://vapter.szini.it:8080/api/orchestrator/targets/ \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer": "customer-uuid",
+    "name": "Invalid Target",
+    "address": "invalid.address.300",
+    "description": "Should fail"
+  }'
+
+# 3. Test avvio scansione da target
+curl -X POST http://vapter.szini.it:8080/api/orchestrator/targets/1/scan/ \
+  -H "Content-Type: application/json" \
+  -d '{"scan_type_id": 2}'
+
 ## ✅ Checklist Test Completo Aggiornata
 
 ### Frontend Base

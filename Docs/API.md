@@ -388,6 +388,28 @@ Avviare una nuova scansione per un target.
 }
 ```
 
+#### Validazione Address
+Il campo `address` supporta sia indirizzi IP (IPv4/IPv6) che FQDN. La validazione include:
+
+**IP Address**:
+- IPv4: formato standard `xxx.xxx.xxx.xxx` con octets 0-255
+- IPv6: formato completo o abbreviato
+
+**FQDN**:
+- Lunghezza massima: 253 caratteri
+- Label massimo: 63 caratteri
+- No doppi punti (..)
+- No trattino iniziale/finale nei label
+- Pattern: `[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)*`
+
+#### Response Fields Aggiuntivi
+- `scans_count`: Numero totale di scansioni eseguite
+- `last_scan`: Oggetto con dettagli ultima scansione:
+  - `id`: ID della scansione
+  - `status`: Stato corrente
+  - `initiated_at`: Data/ora di avvio
+  - `completed_at`: Data/ora di completamento (se completata)
+  
 ### 5. Scans
 
 #### GET /api/orchestrator/scans/
