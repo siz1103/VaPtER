@@ -8,7 +8,7 @@ export async function getScans(customerId?: string): Promise<Scan[]> {
   
   if (customerId) {
     // Using target__customer filter as defined in backend ScanFilter
-    params['target__customer'] = customerId
+    params['customer'] = customerId
   }
   
   console.log('getScans params:', params) // Debug log to verify filter
