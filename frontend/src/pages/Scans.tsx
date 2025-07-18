@@ -2,12 +2,15 @@
 
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Search, Activity, AlertTriangle } from 'lucide-react'
+import { Search, Activity, AlertTriangle, Plus } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { Dialog } from '@/components/ui/dialog'
 import { useCustomerStore } from '@/store/customerStore'
 import { useToast } from '@/components/ui/use-toast'
 import ScanTable from '@/components/scans/ScanTable'
+import ScanForm from '@/components/scans/ScanForm'
 import { 
   getScans, 
   deleteScan, 
@@ -20,6 +23,7 @@ import { getScanTypes } from '@/services/scanTypeService'
 
 export default function Scans() {
   const [searchTerm, setSearchTerm] = useState('')
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const { selectedCustomer } = useCustomerStore()
   const { toast } = useToast()
   const queryClient = useQueryClient()
@@ -126,6 +130,10 @@ export default function Scans() {
     changeScanTypeMutation.mutate({ scanId, scanTypeId })
   }
   
+  const handleCreateSuccess = () => {
+    setIsCreateDialogOpen(false)
+  }
+  
   // Show customer selection message if no customer is selected
   if (!selectedCustomer) {
     return (
@@ -185,6 +193,11 @@ export default function Scans() {
             Vulnerability assessment scans for {selectedCustomer.name}
           </p>
         </div>
+        
+        <Button onClick={() => setIsCreateDialogOpen(true)}>
+          <Plus className="mr-2 h-4 w-4" />
+          Add Scan
+        </Button>
       </div>
       
       {/* Stats Cards */}
@@ -279,6 +292,14 @@ export default function Scans() {
           )}
         </CardContent>
       </Card>
+      
+      {/* Create Dialog */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <ScanForm 
+          onSuccess={handleCreateSuccess}
+          onCancel={() => setIsCreateDialogOpen(false)}
+        />
+      </Dialog>
     </div>
   )
 }

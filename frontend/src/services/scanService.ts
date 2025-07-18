@@ -1,3 +1,5 @@
+// frontend/src/services/scanService.ts
+
 import apiClient from '@/lib/api'
 import type { Scan, PaginatedResponse, ScanType } from '@/types'
 
@@ -5,8 +7,11 @@ export async function getScans(customerId?: string): Promise<Scan[]> {
   const params: Record<string, any> = {}
   
   if (customerId) {
-    params.target__customer = customerId
+    // Using target__customer filter as defined in backend ScanFilter
+    params['target__customer'] = customerId
   }
+  
+  console.log('getScans params:', params) // Debug log to verify filter
   
   const response = await apiClient.get<PaginatedResponse<Scan>>('/orchestrator/scans/', { params })
   return response.data.results
