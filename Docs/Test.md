@@ -1,591 +1,351 @@
-# 🚀 Guida Setup VaPtER - Test Completo con Settings Pages
+# Docs/Test.md
 
-Questa guida ti aiuterà a configurare e testare i vari componenti implementati, incluse le nuove pagine Settings per Port Lists e Scan Types.
+# Test del Sistema
 
-## 📋 Prerequisiti
+## 1. Test Backend
 
-- Docker e Docker Compose installati
-- Accesso alla shell/terminale
-- Tool per test API (curl, Postman, o browser)
-
-## 🔧 Setup Iniziale
-
-### 1. Clone e Configurazione
-
+### Test dei Models
 ```bash
-# Clonare il repository (se necessario)
-cd vapt_project_root
+# Accedere alla shell Django
+docker-compose exec backend python manage.py shell
 
-# Copiare e configurare environment
-cp .env.example .env
-# Editare .env se necessario per il proprio ambiente
+# Test Customer
+from orchestrator_api.models import Customer
+customer = Customer.objects.create(
+    name="Test Customer",
+    email="test@example.com",
+    company_name="Test Company"
+)
+print(customer.id, customer.name)
+
+# Test PortList
+from orchestrator_api.models import PortList
+port_list = PortList.objects.get(name="Standard TCP Scan")
+print(port_list.tcp_ports)
+
+# Test Target
+from orchestrator_api.models import Target
+target = Target.objects.create(
+    customer=customer,
+    name="Test Server",
+    address="192.168.1.100"
+)
+print(target.id, target.address)
 ```
 
-### 2. Avvio Servizi
+### Test delle API
 
+#### Test Customer API
 ```bash
-# Build e avvio di tutti i servizi (incluso API Gateway)
-docker-compose build
-docker-compose up -d
-
-# Verificare che tutti i servizi siano attivi
-docker-compose ps
-```
-
-**Output atteso:**
-```
-Name                   Command                  State           Ports
-------------------------------------------------------------------------
-vapter_api_gateway     uvicorn app.main:app ... Up             0.0.0.0:8080->8080/tcp
-vapter_backend         sh -c python manage.py   Up             0.0.0.0:8000->8000/tcp
-vapter_backend_consumer python manage.py con... Up
-vapter_db              docker-entrypoint.s...   Up             0.0.0.0:5432->5432/tcp
-vapter_rabbitmq        docker-entrypoint.s...   Up             0.0.0.0:15672->15672/tcp, 0.0.0.0:5672->5672/tcp
-vapter_frontend        npm run dev            Up             0.0.0.0:3000->3000/tcp
-vapter_nmap_scanner    python3 nmap_scanner.py Up
-```
-
-### 3. Setup Database
-
-```bash
-# Eseguire migrazioni
-docker-compose exec backend python manage.py migrate
-
-# Caricare dati iniziali
-docker-compose exec backend python manage.py loaddata initial_data.json
-
-# Creare superuser per admin
-docker-compose exec backend python manage.py createsuperuser
-```
-
-## 🧪 Test dei Componenti
-
-### 0. Test Frontend React Completo
-
-#### Verificare Frontend Status
-
-```bash
-# Verificare che il container frontend sia attivo
-docker-compose ps frontend
-
-# Verificare logs del frontend
-docker-compose logs frontend
-
-# Test accesso al frontend
-curl -I http://vapter.szini.it:3000/
-
-# Aprire il browser e navigare a
-# http://vapter.szini.it:3000/
-```
-
-**Verifiche da fare nel browser:**
-1. ✅ La pagina si carica correttamente con tema dark
-2. ✅ Il layout mostra header e sidebar
-3. ✅ Il dropdown dei customer è visibile nell'header
-4. ✅ La navigazione tra le pagine funziona
-5. ✅ I modali si aprono correttamente
-
-#### Test Nuove Pagine Settings
-
-**1. Test Port Lists Page:**
-```bash
-# Navigare a http://vapter.szini.it:3000/settings/port-lists
-```
-
-**Verifiche da fare:**
-- ✅ Pagina carica con tabella port lists esistenti
-- ✅ Bottone "Create Port List" funziona
-- ✅ Modal di creazione si apre correttamente
-- ✅ Validazione porte TCP/UDP funziona in real-time
-- ✅ Conteggio porte viene mostrato durante input
-- ✅ Ricerca dinamica filtra risultati
-- ✅ Dropdown azioni (Edit/Delete) funziona
-- ✅ Modal di conferma cancellazione si apre
-- ✅ Form di modifica precompila dati esistenti
-
-**Test Cases Port Lists:**
-```bash
-# Test formato porte validi:
-# - Porte singole: "22,80,443"
-# - Range: "1-1000"
-# - Combinazione: "22,80,443,1000-2000"
-# - TCP+UDP: TCP="80,443" UDP="53,123"
-
-# Test formato porte invalidi:
-# - Porte fuori range: "70000"
-# - Range invalido: "1000-500"
-# - Caratteri non numerici: "abc,80"
-```
-
-**2. Test Scan Types Page:**
-```bash
-# Navigare a http://vapter.szini.it:3000/settings/scan-types
-```
-
-**Verifiche da fare:**
-- ✅ Pagina carica con tabella scan types esistenti
-- ✅ Badge per Discovery/Port Scan visibili
-- ✅ Plugin badges mostrano configurazione
-- ✅ Bottone "Create Scan Type" funziona
-- ✅ Modal complesso si apre correttamente
-- ✅ Switch "Discovery Only" disabilita port list e plugin
-- ✅ Dropdown Port List carica opzioni dinamicamente
-- ✅ Plugin switches funzionano indipendentemente
-- ✅ Summary mostra configurazione in tempo reale
-- ✅ Validation impedisce Discovery + Port List
-
-**Test Cases Scan Types:**
-```bash
-# Test Discovery Scan:
-# - only_discovery = true
-# - port_list deve essere disabilitato
-# - tutti i plugin devono essere disabilitati
-
-# Test Port Scan:
-# - only_discovery = false
-# - port_list selezionabile
-# - plugin configurabili liberamente
-
-# Test logica UI:
-# - Cambio Discovery Only resetta altri campi
-# - Summary mostra preview configurazione
-```
-
-#### Test Proxy API dal Frontend
-
-```bash
-# Verificare che il frontend possa comunicare con l'API Gateway
-docker-compose exec frontend wget -qO- http://api_gateway:8080/health/
-
-# Verificare nei Developer Tools del browser (F12)
-# - Network tab: le chiamate API vanno a /api/...
-# - Console: nessun errore CORS
-```
-
-### 1. Test API Gateway
-
-#### Verificare API Gateway Status
-
-```bash
-# Health check base
-curl http://vapter.szini.it:8080/health/
-
-# Health check dettagliato (verifica connessione backend)
-curl http://vapter.szini.it:8080/health/detailed
-
-# Readiness probe
-curl http://vapter.szini.it:8080/health/readiness
-
-# Liveness probe
-curl http://vapter.szini.it:8080/health/liveness
-```
-
-#### Verificare Documentazione API Gateway
-
-1. Andare a: http://vapter.szini.it:8080/docs
-2. Verificare che la documentazione FastAPI sia accessibile
-3. Testare alcuni endpoint direttamente dall'interfaccia Swagger
-
-### 2. Test Database e Django
-
-#### Verificare Django Admin
-
-1. Andare a: http://vapter.szini.it:8000/admin/
-2. Login con le credenziali del superuser
-3. Verificare che siano visibili tutte le sezioni:
-   - Customers
-   - Port Lists ✅ NUOVO
-   - Scan Types ✅ NUOVO
-   - Targets
-   - Scans
-   - Scan Details
-
-#### Verificare Dati Iniziali
-
-```bash
-# Tramite API Gateway (raccomandato)
-curl http://vapter.szini.it:8080/api/orchestrator/port-lists/
-curl http://vapter.szini.it:8080/api/orchestrator/scan-types/
-
-# Tramite Backend diretto (per confronto)
-curl http://vapter.szini.it:8000/api/orchestrator/port-lists/
-```
-
-**Output atteso:** Liste con 5 Port Lists e 6 Scan Types predefiniti.
-
-### 3. Test API REST Nuove - Settings
-
-#### Test CRUD Completo - Port Lists
-
-```bash
-# 1. Ottenere lista port lists
-curl http://vapter.szini.it:8080/api/orchestrator/port-lists/
-
-# 2. Creare una nuova port list
-curl -X POST http://vapter.szini.it:8080/api/orchestrator/port-lists/ \
+# Creare un customer
+curl -X POST http://vapter.szini.it:8080/api/orchestrator/customers/ \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "Test Web Ports",
-    "tcp_ports": "80,443,8080,8443",
-    "udp_ports": "53,123",
-    "description": "Porte per test web applications"
+    "name": "Test Customer",
+    "email": "test@example.com",
+    "company_name": "Test Inc",
+    "contact_person": "John Doe"
   }'
 
-# 3. Ottenere port list specifica (sostituire {id})
-curl http://vapter.szini.it:8080/api/orchestrator/port-lists/{id}/
+# Ottenere lista customers
+curl http://vapter.szini.it:8080/api/orchestrator/customers/
 
-# 4. Aggiornare port list
-curl -X PATCH http://vapter.szini.it:8080/api/orchestrator/port-lists/{id}/ \
-  -H "Content-Type: application/json" \
-  -d '{"description": "Descrizione aggiornata"}'
-
-# 5. Test validazione porte (dovrebbe fallire)
-curl -X POST http://vapter.szini.it:8080/api/orchestrator/port-lists/ \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Invalid Ports",
-    "tcp_ports": "70000,abc,1000-500",
-    "description": "Test porte invalide"
-  }'
-
-# 6. Eliminare port list
-curl -X DELETE http://vapter.szini.it:8080/api/orchestrator/port-lists/{id}/
+# Ottenere dettaglio customer (sostituire UUID)
+curl http://vapter.szini.it:8080/api/orchestrator/customers/{customer-id}/
 ```
 
-#### Test CRUD Completo - Scan Types
-
+#### Test Target API
 ```bash
-# 1. Ottenere lista scan types
-curl http://vapter.szini.it:8080/api/orchestrator/scan-types/
-
-# 2. Creare scan type discovery
-curl -X POST http://vapter.szini.it:8080/api/orchestrator/scan-types/ \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Test Discovery",
-    "only_discovery": true,
-    "be_quiet": true,
-    "description": "Test scan discovery only"
-  }'
-
-# 3. Creare scan type completo con plugin
-curl -X POST http://vapter.szini.it:8080/api/orchestrator/scan-types/ \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Test Complete Scan",
-    "only_discovery": false,
-    "port_list": 1,
-    "plugin_finger": true,
-    "plugin_vuln_lookup": true,
-    "description": "Test scan completo"
-  }'
-
-# 4. Test validazione (dovrebbe fallire - discovery con port list)
-curl -X POST http://vapter.szini.it:8080/api/orchestrator/scan-types/ \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Invalid Discovery",
-    "only_discovery": true,
-    "port_list": 1,
-    "plugin_finger": true
-  }'
-
-# 5. Filtri avanzati scan types
-curl "http://vapter.szini.it:8080/api/orchestrator/scan-types/?with_finger=true"
-curl "http://vapter.szini.it:8080/api/orchestrator/scan-types/?with_web=true"
-```
-
-### 4. Test Filtri e Ricerca Avanzata
-
-#### Test Port Lists
-
-```bash
-# Test ricerca per nome
-curl "http://vapter.szini.it:8080/api/orchestrator/port-lists/?search=TCP"
-
-# Test ricerca per porte
-curl "http://vapter.szini.it:8080/api/orchestrator/port-lists/?search=80"
-
-# Test ricerca per descrizione
-curl "http://vapter.szini.it:8080/api/orchestrator/port-lists/?search=common"
-```
-
-#### Test Scan Types
-
-```bash
-# Test ricerca per nome
-curl "http://vapter.szini.it:8080/api/orchestrator/scan-types/?search=Discovery"
-
-# Test filtri plugin
-curl "http://vapter.szini.it:8080/api/orchestrator/scan-types/?with_finger=true&with_enum=true"
-
-# Test combinazioni
-curl "http://vapter.szini.it:8080/api/orchestrator/scan-types/?search=Complete&with_vuln=true"
-```
-
-### 5. Test Validazioni e Error Handling
-
-#### Test Validazioni Port Lists
-
-```bash
-# Test nome duplicato (dovrebbe fallire)
-curl -X POST http://vapter.szini.it:8080/api/orchestrator/port-lists/ \
-  -H "Content-Type: application/json" \
-  -d '{"name": "All IANA assigned TCP", "tcp_ports": "80,443"}'
-
-# Test senza porte (dovrebbe fallire)
-curl -X POST http://vapter.szini.it:8080/api/orchestrator/port-lists/ \
-  -H "Content-Type: application/json" \
-  -d '{"name": "Empty Ports", "description": "No ports specified"}'
-
-# Test formato porte invalido
-curl -X POST http://vapter.szini.it:8080/api/orchestrator/port-lists/ \
-  -H "Content-Type: application/json" \
-  -d '{"name": "Bad Format", "tcp_ports": "22;80;443"}'
-```
-
-#### Test Validazioni Scan Types
-
-```bash
-# Test nome duplicato
-curl -X POST http://vapter.szini.it:8080/api/orchestrator/scan-types/ \
-  -H "Content-Type: application/json" \
-  -d '{"name": "Discovery", "only_discovery": true}'
-
-# Test port list inesistente
-curl -X POST http://vapter.szini.it:8080/api/orchestrator/scan-types/ \
-  -H "Content-Type: application/json" \
-  -d '{"name": "Invalid Port List", "port_list": 999}'
-```
-
-### 6. Test Dipendenze e Cancellazioni
-
-#### Test Cancellazione Port List in Uso
-
-```bash
-# 1. Verificare scan types che usano port list 1
-curl "http://vapter.szini.it:8080/api/orchestrator/scan-types/?port_list=1"
-
-# 2. Tentare cancellazione port list usata (dovrebbe fallire)
-curl -X DELETE http://vapter.szini.it:8080/api/orchestrator/port-lists/1/
-
-# Output atteso: Errore 400 con messaggio di dipendenza
-```
-
-#### Test Cancellazione Scan Type in Uso
-
-```bash
-# Dopo aver creato scansioni con un scan type
-# Tentare cancellazione scan type usato (dovrebbe fallire)
-curl -X DELETE http://vapter.szini.it:8080/api/orchestrator/scan-types/1/
-```
-
-### 7. Test Frontend Integration E2E
-
-#### Test Workflow Completo Frontend
-
-1. **Aprire http://vapter.szini.it:3000/**
-2. **Selezionare/Creare Customer** dal dropdown header
-3. **Navigare a Settings → Port Lists**
-4. **Creare nuova Port List:**
-   - Nome: "Test E2E Ports"
-   - TCP: "80,443,8080-8090"
-   - UDP: "53,123"
-   - Descrizione: "Test end-to-end"
-5. **Verificare validazione in tempo reale** durante input
-6. **Salvare e verificare** in tabella
-7. **Navigare a Settings → Scan Types**
-8. **Creare nuovo Scan Type:**
-   - Nome: "Test E2E Scan"
-   - Port List: Selezionare quella creata
-   - Plugins: Abilitare Fingerprinting e Vuln Lookup
-9. **Verificare preview configurazione**
-10. **Salvare e verificare** in tabella
-11. **Test ricerca dinamica** in entrambe le pagine
-12. **Test modifica** di entrambe le entità
-13. **Test cancellazione** (con conferma)
-
-#### Test Error Handling Frontend
-
-```bash
-# 1. Spegnere backend temporaneamente
-docker-compose stop backend
-
-# 2. Tentare operazioni nel frontend
-# Verificare che vengano mostrati toast di errore appropriati
-
-# 3. Riavviare backend
-docker-compose start backend
-
-# 4. Verificare che le operazioni tornino a funzionare
-```
-
-### 8. Test RabbitMQ e Consumer
-
-```bash
-# Verificare che il consumer sia in esecuzione
-docker-compose logs backend_consumer
-
-# Verificare code RabbitMQ
-# Andare a http://vapter.szini.it:15672/
-# Login: vapter/vapter123
-# Verificare presenza code con messaggi processati
-```
-
-### 9. Test Performance e UI/UX
-
-#### Test Performance Frontend
-
-```bash
-# Nel browser, aprire DevTools (F12)
-# Andare al tab Network
-# Navigare tra le pagine Settings
-# Verificare:
-# - Tempi di caricamento < 500ms
-# - Nessun errore CORS
-# - API calls efficienti (no N+1 queries)
-# - Caching TanStack Query funzionante
-```
-
-#### Test Responsiveness
-
-```bash
-# Testare su diverse dimensioni schermo:
-# - Desktop (1920x1080)
-# - Tablet (768x1024)
-# - Mobile (375x667)
-
-# Verificare:
-# - Tabelle responsive
-# - Modal si adattano allo schermo
-# - Sidebar collassa su mobile
-# - Form rimangono usabili
-```
-
-### 10. Test Accessibility
-
-```bash
-# Nel browser:
-# 1. Utilizzare solo la tastiera per navigare
-# 2. Verificare focus management nei modal
-# 3. Testare screen reader compatibility
-# 4. Verificare contrasti colori (tema dark)
-# 5. Testare con browser zoom al 200%
-```
-
-#### Test Customer Selection
-```bash
-# 1. Aprire http://vapter.szini.it:3000/targets senza customer selezionato
-# Verificare messaggio che invita a selezionare customer
-
-# 2. Selezionare un customer dal dropdown
-# Verificare che la pagina si carichi con i targets del customer
-```
-
-# 1. Test creazione target
+# Creare un target
 curl -X POST http://vapter.szini.it:8080/api/orchestrator/targets/ \
   -H "Content-Type: application/json" \
   -d '{
-    "customer": "customer-uuid",
-    "name": "Web Server Test",
+    "customer": "{customer-id}",
+    "name": "Web Server",
     "address": "192.168.1.100",
-    "description": "Test server"
+    "description": "Primary web server"
   }'
 
-# 2. Test validazione indirizzo (dovrebbe fallire)
+# Test validazione IP
 curl -X POST http://vapter.szini.it:8080/api/orchestrator/targets/ \
   -H "Content-Type: application/json" \
   -d '{
-    "customer": "customer-uuid",
-    "name": "Invalid Target",
-    "address": "invalid.address.300",
-    "description": "Should fail"
+    "customer": "{customer-id}",
+    "name": "Invalid IP",
+    "address": "999.999.999.999"
+  }'
+# Dovrebbe restituire errore di validazione
+
+# Test validazione FQDN
+curl -X POST http://vapter.szini.it:8080/api/orchestrator/targets/ \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer": "{customer-id}",
+    "name": "Domain Server",
+    "address": "example.com"
+  }'
+```
+
+#### Test Scan API
+```bash
+# Avviare una scansione
+curl -X POST http://vapter.szini.it:8080/api/orchestrator/targets/{target-id}/scan/ \
+  -H "Content-Type: application/json" \
+  -d '{
+    "scan_type_id": 1
   }'
 
-# 3. Test avvio scansione da target
-curl -X POST http://vapter.szini.it:8080/api/orchestrator/targets/1/scan/ \
+# Test scansioni multiple sullo stesso target
+# Avviare prima scansione
+curl -X POST http://vapter.szini.it:8080/api/orchestrator/targets/{target-id}/scan/ \
   -H "Content-Type: application/json" \
-  -d '{"scan_type_id": 2}'
+  -d '{
+    "scan_type_id": 1
+  }'
 
-## ✅ Checklist Test Completo Aggiornata
+# Avviare seconda scansione (dovrebbe funzionare senza errori)
+curl -X POST http://vapter.szini.it:8080/api/orchestrator/targets/{target-id}/scan/ \
+  -H "Content-Type: application/json" \
+  -d '{
+    "scan_type_id": 2
+  }'
 
-### Frontend Base
-- [X] Frontend React avviato e accessibile
-- [X] Layout con tema dark funzionante
-- [X] Navigazione tra pagine funzionante
-- [X] Comunicazione Frontend → API Gateway funzionante
-- [X] Customer dropdown e gestione funzionante
+# Verificare che entrambe le scansioni siano presenti
+curl http://vapter.szini.it:8080/api/orchestrator/targets/{target-id}/scans/
 
-### Nuove Pagine Settings
-- [ ] **Port Lists Page completa e funzionante**
-  - [ ] Tabella con dati caricati correttamente
-  - [ ] Ricerca dinamica funzionante
-  - [ ] Modal creazione/modifica apertura
-  - [ ] Validazione porte in tempo reale
-  - [ ] Conteggio porte automatico
-  - [ ] CRUD operations complete
-  - [ ] Error handling appropriato
-  - [ ] Conferma cancellazione
-- [ ] **Scan Types Page completa e funzionante**
-  - [ ] Tabella con badges e configurazioni
-  - [ ] Modal complesso con tutti i controlli
-  - [ ] Logica Discovery Only funzionante
-  - [ ] Integration con Port Lists
-  - [ ] Plugin configuration switches
-  - [ ] Preview configurazione in tempo reale
-  - [ ] CRUD operations complete
-  - [ ] Validazioni appropriate
+# Monitorare lo stato di una scansione
+curl http://vapter.szini.it:8080/api/orchestrator/scans/{scan-id}/
 
-### API e Backend
-- [X] Servizi Docker tutti avviati
-- [X] API Gateway health check OK
-- [X] Django Admin accessibile
-- [X] Dati iniziali caricati
-- [ ] **API Port Lists funzionanti tramite Gateway**
-  - [ ] GET lista port lists
-  - [ ] POST creazione con validazione
-  - [ ] PATCH/PUT aggiornamento
-  - [ ] DELETE con controllo dipendenze
-  - [ ] Filtri e ricerca API
-- [ ] **API Scan Types funzionanti tramite Gateway**
-  - [ ] GET lista scan types
-  - [ ] POST creazione con validazione
-  - [ ] Integration con Port Lists
-  - [ ] Plugin filters API
-  - [ ] DELETE con controllo dipendenze
+# Riavviare una scansione completata o fallita
+curl -X POST http://vapter.szini.it:8080/api/orchestrator/scans/{scan-id}/restart/
+```
 
-### Integration e E2E
-- [ ] **Workflow completo Port Lists**
-  - [ ] Creazione → Visualizzazione → Modifica → Cancellazione
-  - [ ] Validazione formati porte complessi
-  - [ ] Error handling per dipendenze
-- [ ] **Workflow completo Scan Types**
-  - [ ] Creazione → Configuration → Preview → Save
-  - [ ] Discovery vs Port Scan logic
-  - [ ] Plugin configuration
-- [ ] **Performance frontend accettabile**
-  - [ ] Caricamento pagine < 500ms
-  - [ ] TanStack Query caching funzionante
-  - [ ] UI responsive su tutti i dispositivi
-- [ ] **Error handling robusto**
-  - [ ] Toast notifications appropriate
-  - [ ] Fallback per errori API
-  - [ ] Loading states consistenti
+### Test RabbitMQ
 
-### Sistema Completo
-- [X] RabbitMQ accessibile e consumer attivo
-- [X] Modulo Nmap Scanner funzionante
-- [X] Logging Gateway funzionante
-- [X] Headers personalizzati del gateway presenti
-- [X] Gestione errori del gateway corretta
+```bash
+# Verificare che RabbitMQ sia attivo
+docker-compose exec backend python -c "
+import pika
+connection = pika.BlockingConnection(pika.URLParameters('amqp://vapter:vapter123@rabbitmq:5672/'))
+print('RabbitMQ connection successful')
+connection.close()
+"
 
-## 🚀 Prossimi Passi
+# Verificare le code
+docker-compose exec rabbitmq rabbitmqctl list_queues
 
-Una volta completata questa checklist:
-1. ✅ Le pagine Settings sono complete e pronte per l'uso
-2. ✅ Il sistema di configurazione è operativo
-3. 🔄 Pronti per implementare Target e Scan management
-4. 🔄 Fondamenta pronte per polling e real-time updates
-5. 🔄 Pattern stabiliti per future pagine CRUD
+# Pubblicare un messaggio di test
+docker-compose exec backend python -c "
+from orchestrator_api.services import RabbitMQService
+service = RabbitMQService()
+service.connect()
+success = service.publish_message('nmap_scan_requests', {'test': 'message'})
+print(f'Message published: {success}')
+service.close()
+"
+```
 
-Il sistema di configurazione è ora completo e pronto per la gestione operativa delle scansioni!
+### Test Consumer
+
+```bash
+# Avviare il consumer in modalità verbosa
+docker-compose exec backend python manage.py consume_scan_status --verbosity=2
+
+# In un'altra finestra, inviare un messaggio di test
+docker-compose exec backend python -c "
+import json
+from orchestrator_api.services import RabbitMQService
+service = RabbitMQService()
+service.connect()
+message = {
+    'scan_id': 1,
+    'module': 'nmap',
+    'status': 'completed',
+    'message': 'Test completed'
+}
+service.publish_message('scan_status_updates', message)
+service.close()
+"
+```
+
+## 2. Test Scanner Nmap
+
+```bash
+# Test dello scanner Nmap
+docker-compose exec nmap_scanner python test_nmap.py
+
+# Test manuale di nmap
+docker-compose exec nmap_scanner nmap -sn 192.168.1.1
+
+# Verificare i log dello scanner
+docker-compose logs -f nmap_scanner
+```
+
+## 3. Test Frontend
+
+```bash
+# Verificare che il frontend sia accessibile
+curl http://vapter.szini.it:3000/
+
+# Verificare la build TypeScript
+docker-compose exec frontend npm run build
+
+# Verificare i log del frontend
+docker-compose logs -f frontend
+
+# Test del proxy API dal frontend
+docker-compose exec frontend wget -O- http://api_gateway:8080/api/orchestrator/customers/
+```
+
+## 4. Test End-to-End
+
+### Workflow Completo di Scansione
+
+1. **Creare un customer**
+```bash
+CUSTOMER_ID=$(curl -s -X POST http://vapter.szini.it:8080/api/orchestrator/customers/ \
+  -H "Content-Type: application/json" \
+  -d '{"name": "E2E Test", "email": "e2e@test.com"}' | jq -r '.id')
+echo "Customer ID: $CUSTOMER_ID"
+```
+
+2. **Creare un target**
+```bash
+TARGET_ID=$(curl -s -X POST http://vapter.szini.it:8080/api/orchestrator/targets/ \
+  -H "Content-Type: application/json" \
+  -d "{\"customer\": \"$CUSTOMER_ID\", \"name\": \"Test Target\", \"address\": \"127.0.0.1\"}" | jq -r '.id')
+echo "Target ID: $TARGET_ID"
+```
+
+3. **Avviare una scansione**
+```bash
+SCAN_ID=$(curl -s -X POST http://vapter.szini.it:8080/api/orchestrator/targets/$TARGET_ID/scan/ \
+  -H "Content-Type: application/json" \
+  -d '{"scan_type_id": 1}' | jq -r '.id')
+echo "Scan ID: $SCAN_ID"
+```
+
+4. **Monitorare lo stato**
+```bash
+# Loop per monitorare lo stato
+while true; do
+  STATUS=$(curl -s http://vapter.szini.it:8080/api/orchestrator/scans/$SCAN_ID/ | jq -r '.status')
+  echo "Status: $STATUS"
+  if [[ "$STATUS" == "Completed" ]] || [[ "$STATUS" == "Failed" ]]; then
+    break
+  fi
+  sleep 5
+done
+```
+
+5. **Test scansioni multiple**
+```bash
+# Avviare una seconda scansione sullo stesso target
+SCAN2_ID=$(curl -s -X POST http://vapter.szini.it:8080/api/orchestrator/targets/$TARGET_ID/scan/ \
+  -H "Content-Type: application/json" \
+  -d '{"scan_type_id": 2}' | jq -r '.id')
+echo "Second Scan ID: $SCAN2_ID"
+
+# Verificare che entrambe le scansioni esistano
+curl -s http://vapter.szini.it:8080/api/orchestrator/targets/$TARGET_ID/scans/ | jq '.[] | {id, status, scan_type_name}'
+```
+
+## 5. Test di Performance
+
+```bash
+# Test carico API
+ab -n 1000 -c 10 http://vapter.szini.it:8080/api/orchestrator/customers/
+
+# Test carico con POST
+ab -n 100 -c 5 -p test_data.json -T application/json http://vapter.szini.it:8080/api/orchestrator/targets/
+
+# Monitor risorse durante i test
+docker stats
+```
+
+## 6. Test di Sicurezza (Base)
+
+```bash
+# Test SQL Injection (dovrebbe fallire)
+curl -X GET "http://vapter.szini.it:8080/api/orchestrator/customers/?search=';DROP TABLE customers;--"
+
+# Test XSS (dovrebbe essere sanitizzato)
+curl -X POST http://vapter.szini.it:8080/api/orchestrator/customers/ \
+  -H "Content-Type: application/json" \
+  -d '{"name": "<script>alert(1)</script>", "email": "xss@test.com"}'
+
+# Test autenticazione (quando implementata)
+# curl -X GET http://vapter.szini.it:8080/api/orchestrator/customers/ \
+#   -H "Authorization: Bearer invalid-token"
+```
+
+## 7. Verifica Logs
+
+```bash
+# Tutti i log
+docker-compose logs
+
+# Log specifici con follow
+docker-compose logs -f backend
+docker-compose logs -f api_gateway
+docker-compose logs -f nmap_scanner
+
+# Filtrare per errori
+docker-compose logs | grep -i error
+
+# Log delle ultime 2 ore
+docker-compose logs --since 2h
+```
+
+## 8. Troubleshooting Test
+
+### Database Issues
+```bash
+# Reset database di test
+docker-compose exec backend python manage.py flush --no-input
+docker-compose exec backend python manage.py migrate
+docker-compose exec backend python manage.py loaddata initial_data.json
+```
+
+### RabbitMQ Issues
+```bash
+# Reset code RabbitMQ
+docker-compose exec rabbitmq rabbitmqctl stop_app
+docker-compose exec rabbitmq rabbitmqctl reset
+docker-compose exec rabbitmq rabbitmqctl start_app
+```
+
+### Container Issues
+```bash
+# Ricreare un container specifico
+docker-compose stop backend
+docker-compose rm -f backend
+docker-compose up -d backend
+
+# Rebuild completo
+docker-compose down
+docker-compose build --no-cache
+docker-compose up -d
+```
+
+## Test Checklist
+
+- [ ] Backend API risponde correttamente
+- [ ] Customer CRUD funzionante
+- [ ] Target validation (IP/FQDN) funzionante
+- [ ] Scan creation funzionante
+- [ ] Multiple scans sullo stesso target funzionanti
+- [ ] RabbitMQ connection funzionante
+- [ ] Nmap scanner riceve messaggi
+- [ ] Status updates processati correttamente
+- [ ] Frontend carica correttamente
+- [ ] API Gateway proxy funzionante
+- [ ] Logs senza errori critici
+- [ ] Scan completa con successo (stato "Completed")
+
+## Note Importanti
+
+1. **Plugin Non Implementati**: I test per fingerprint, enum, web e vuln lookup sono placeholder
+2. **Scansioni Multiple**: Ora è possibile eseguire più scansioni sullo stesso target senza errori
+3. **Completamento Scan**: Le scansioni vengono marcate come "Completed" dopo nmap, indipendentemente dai plugin abilitati
+4. **Autenticazione**: Non ancora implementata, tutti gli endpoint sono pubblici

@@ -1,5 +1,3 @@
-# backend/orchestrator_api/serializers.py
-
 from rest_framework import serializers
 from django.core.exceptions import ValidationError as DjangoValidationError
 from .models import Customer, PortList, ScanType, Target, Scan, ScanDetail
@@ -89,10 +87,9 @@ class ScanTypeSerializer(serializers.ModelSerializer):
     class Meta:
         model = ScanType
         fields = [
-            'id', 'name', 'only_discovery', 'consider_alive', 'be_quiet',
-            'port_list', 'port_list_name', 'plugin_finger', 'plugin_enum',
-            'plugin_web', 'plugin_vuln_lookup', 'description', 'created_at',
-            'updated_at', 'enabled_plugins'
+            'id', 'name', 'port_list', 'port_list_name',
+            'plugin_finger', 'plugin_enum', 'plugin_web', 'plugin_vuln_lookup',
+            'description', 'created_at', 'updated_at', 'enabled_plugins'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
     
@@ -104,25 +101,22 @@ class ScanTypeSerializer(serializers.ModelSerializer):
         if obj.plugin_enum:
             plugins.append('enumeration')
         if obj.plugin_web:
-            plugins.append('web_scanning')
+            plugins.append('web')
         if obj.plugin_vuln_lookup:
-            plugins.append('vulnerability_lookup')
+            plugins.append('vulnerability')
         return plugins
     
-    def validate(self, data):
-        """Validate ScanType data"""
-        # If only_discovery is True, port_list should not be required
-        if data.get('only_discovery', False) and data.get('port_list'):
-            raise serializers.ValidationError(
-                "Port list should not be specified for discovery-only scans"
-            )
-        
-        # If not discovery-only, port_list is recommended
-        if not data.get('only_discovery', False) and not data.get('port_list'):
-            # This is a warning, not an error
-            pass
-        
-        return data
+    def validate_name(self, value):
+        """Validate unique name"""
+        if self.instance:
+            # Update case - exclude current instance
+            if ScanType.objects.exclude(id=self.instance.id).filter(name=value).exists():
+                raise serializers.ValidationError("A scan type with this name already exists.")
+        else:
+            # Create case
+            if ScanType.objects.filter(name=value).exists():
+                raise serializers.ValidationError("A scan type with this name already exists.")
+        return value
 
 
 class TargetSerializer(serializers.ModelSerializer):
@@ -295,36 +289,54 @@ class ScanCreateSerializer(serializers.ModelSerializer):
         if not target or not scan_type:
             raise serializers.ValidationError("Both target and scan_type are required")
         
-        # Check if there's already a running scan for this target
-        running_statuses = [
-            'Queued', 'Nmap Scan Running', 'Finger Scan Running',
-            'Enum Scan Running', 'Web Scan Running', 'Vuln Lookup Running',
-            'Report Generation Running'
-        ]
-        
-        if Scan.objects.filter(target=target, status__in=running_statuses).exists():
-            raise serializers.ValidationError(
-                f"Target '{target.name}' already has a running scan. Please wait for it to complete."
-            )
+        # REMOVED: Check for running scans - allow multiple scans on same target
+        # This allows users to run different scan types or repeat scans
+        # as requested in the requirements
         
         return data
 
 
 class ScanUpdateSerializer(serializers.ModelSerializer):
-    """Specialized serializer for updating scans (mainly for scanner modules)"""
+    """Specialized serializer for updating scans"""
     
     class Meta:
         model = Scan
-        fields = [
-            'status', 'started_at', 'completed_at', 'parsed_nmap_results',
-            'parsed_finger_results', 'parsed_enum_results', 'parsed_web_results',
-            'parsed_vuln_results', 'error_message', 'report_path'
-        ]
-    
+        fields = ['status', 'error_message', 'report_path']
+        
     def validate_status(self, value):
         """Validate status transitions"""
         if self.instance:
             current_status = self.instance.status
-            # Add status transition validation logic here if needed
-            # For now, allow any transition (will be refined later)
+            
+            # Define valid status transitions
+            valid_transitions = {
+                'Pending': ['Queued', 'Failed'],
+                'Queued': ['Nmap Scan Running', 'Failed'],
+                'Nmap Scan Running': ['Nmap Scan Completed', 'Failed'],
+                'Nmap Scan Completed': ['Finger Scan Running', 'Enum Scan Running', 
+                                       'Web Scan Running', 'Vuln Lookup Running', 
+                                       'Report Generation Running', 'Completed', 'Failed'],
+                'Finger Scan Running': ['Finger Scan Completed', 'Failed'],
+                'Finger Scan Completed': ['Enum Scan Running', 'Web Scan Running', 
+                                         'Vuln Lookup Running', 'Report Generation Running', 
+                                         'Completed', 'Failed'],
+                'Enum Scan Running': ['Enum Scan Completed', 'Failed'],
+                'Enum Scan Completed': ['Web Scan Running', 'Vuln Lookup Running', 
+                                       'Report Generation Running', 'Completed', 'Failed'],
+                'Web Scan Running': ['Web Scan Completed', 'Failed'],
+                'Web Scan Completed': ['Vuln Lookup Running', 'Report Generation Running', 
+                                      'Completed', 'Failed'],
+                'Vuln Lookup Running': ['Vuln Lookup Completed', 'Failed'],
+                'Vuln Lookup Completed': ['Report Generation Running', 'Completed', 'Failed'],
+                'Report Generation Running': ['Completed', 'Failed'],
+                'Completed': [],  # Terminal state
+                'Failed': []  # Terminal state
+            }
+            
+            if current_status in valid_transitions:
+                if value not in valid_transitions[current_status]:
+                    raise serializers.ValidationError(
+                        f"Invalid status transition from '{current_status}' to '{value}'"
+                    )
+            
         return value

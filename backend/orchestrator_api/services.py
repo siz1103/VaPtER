@@ -141,6 +141,21 @@ class ScanOrchestratorService:
         try:
             scan_type = scan.scan_type
             
+            # TEMPORARY FIX: Skip plugin checks until plugins are implemented
+            # TODO: Re-enable plugin checks when plugins are ready
+            logger.info(f"Nmap scan completed for scan {scan.id}")
+            logger.info(f"Plugin status - Finger: {scan_type.plugin_finger}, Enum: {scan_type.plugin_enum}, "
+                       f"Web: {scan_type.plugin_web}, Vuln: {scan_type.plugin_vuln_lookup}")
+            
+            # For now, mark scan as completed since plugins are not implemented
+            scan.status = 'Completed'
+            scan.completed_at = timezone.now()
+            scan.save()
+            
+            logger.info(f"Scan {scan.id} marked as completed (plugins skipped - not implemented)")
+            
+            # TODO: Uncomment and use this code when plugins are implemented
+            """
             # Check which plugins should run next
             next_plugin = None
             
@@ -162,9 +177,12 @@ class ScanOrchestratorService:
                 scan.save()
                 
                 # Start report generation if enabled
-                ScanOrchestratorService._start_report_generation(scan)
+                # ScanOrchestratorService._start_report_generation(scan)
                 
                 return True
+            """
+            
+            return True
                 
         except Exception as e:
             logger.error(f"Error processing nmap completion for scan {scan.id}: {str(e)}")
@@ -176,6 +194,15 @@ class ScanOrchestratorService:
         try:
             scan_type = scan.scan_type
             
+            # TEMPORARY: Skip until plugins are implemented
+            logger.warning(f"Plugin completion called for {plugin_name} but plugins not implemented yet")
+            scan.status = 'Completed'
+            scan.completed_at = timezone.now()
+            scan.save()
+            return True
+            
+            # TODO: Re-enable when plugins are implemented
+            """
             # Determine next plugin based on current one
             next_plugin = None
             
@@ -195,9 +222,10 @@ class ScanOrchestratorService:
                 scan.save()
                 
                 # Start report generation
-                ScanOrchestratorService._start_report_generation(scan)
+                # ScanOrchestratorService._start_report_generation(scan)
                 
                 return True
+            """
                 
         except Exception as e:
             logger.error(f"Error processing {plugin_name} completion for scan {scan.id}: {str(e)}")
@@ -207,6 +235,12 @@ class ScanOrchestratorService:
     def _start_plugin_scan(scan, plugin_name):
         """Start a specific plugin scan"""
         try:
+            # TEMPORARY: Log warning since plugins not implemented
+            logger.warning(f"Attempted to start {plugin_name} plugin for scan {scan.id}, but plugin not implemented")
+            return False
+            
+            # TODO: Re-enable when plugins are implemented
+            """
             # Map plugin names to queues and status
             plugin_config = {
                 'fingerprint': {
@@ -259,6 +293,7 @@ class ScanOrchestratorService:
                 scan.save()
             
             return success
+            """
             
         except Exception as e:
             logger.error(f"Error starting {plugin_name} scan for scan {scan.id}: {str(e)}")
@@ -268,6 +303,12 @@ class ScanOrchestratorService:
     def _start_report_generation(scan):
         """Start report generation"""
         try:
+            # TEMPORARY: Skip report generation
+            logger.warning(f"Report generation requested for scan {scan.id} but not implemented")
+            return False
+            
+            # TODO: Re-enable when report generator is implemented
+            """
             message = {
                 'scan_id': scan.id,
                 'timestamp': timezone.now().isoformat()
@@ -286,6 +327,7 @@ class ScanOrchestratorService:
                 logger.info(f"Started report generation for scan {scan.id}")
             
             return success
+            """
             
         except Exception as e:
             logger.error(f"Error starting report generation for scan {scan.id}: {str(e)}")
@@ -314,11 +356,13 @@ class ScanStatusService:
                     if scan_detail:
                         scan_detail.nmap_completed_at = timezone.now()
                         scan_detail.save()
-                    # Process next phase
+                    
+                    # Process nmap completion
                     ScanOrchestratorService.process_nmap_completion(scan)
-                elif status == 'error':
+                    
+                elif status == 'failed':
                     scan.status = 'Failed'
-                    scan.error_message = error_details or 'Nmap scan failed'
+                    scan.error_message = error_details or message or 'Nmap scan failed'
                     scan.completed_at = timezone.now()
             
             elif module == 'fingerprint':
@@ -332,10 +376,14 @@ class ScanStatusService:
                     if scan_detail:
                         scan_detail.finger_completed_at = timezone.now()
                         scan_detail.save()
+                    
+                    # Process plugin completion
                     ScanOrchestratorService.process_plugin_completion(scan, 'fingerprint')
-                elif status == 'error':
+                    
+                elif status == 'failed':
                     scan.status = 'Failed'
-                    scan.error_message = error_details or 'Fingerprint scan failed'
+                    scan.error_message = error_details or message or 'Fingerprint scan failed'
+                    scan.completed_at = timezone.now()
             
             elif module == 'enum':
                 if status == 'running':
@@ -348,10 +396,14 @@ class ScanStatusService:
                     if scan_detail:
                         scan_detail.enum_completed_at = timezone.now()
                         scan_detail.save()
+                    
+                    # Process plugin completion
                     ScanOrchestratorService.process_plugin_completion(scan, 'enum')
-                elif status == 'error':
+                    
+                elif status == 'failed':
                     scan.status = 'Failed'
-                    scan.error_message = error_details or 'Enumeration scan failed'
+                    scan.error_message = error_details or message or 'Enumeration scan failed'
+                    scan.completed_at = timezone.now()
             
             elif module == 'web':
                 if status == 'running':
@@ -364,10 +416,14 @@ class ScanStatusService:
                     if scan_detail:
                         scan_detail.web_completed_at = timezone.now()
                         scan_detail.save()
+                    
+                    # Process plugin completion
                     ScanOrchestratorService.process_plugin_completion(scan, 'web')
-                elif status == 'error':
+                    
+                elif status == 'failed':
                     scan.status = 'Failed'
-                    scan.error_message = error_details or 'Web scan failed'
+                    scan.error_message = error_details or message or 'Web scan failed'
+                    scan.completed_at = timezone.now()
             
             elif module == 'vuln_lookup':
                 if status == 'running':
@@ -380,10 +436,14 @@ class ScanStatusService:
                     if scan_detail:
                         scan_detail.vuln_completed_at = timezone.now()
                         scan_detail.save()
+                    
+                    # Process plugin completion
                     ScanOrchestratorService.process_plugin_completion(scan, 'vuln_lookup')
-                elif status == 'error':
+                    
+                elif status == 'failed':
                     scan.status = 'Failed'
-                    scan.error_message = error_details or 'Vulnerability lookup failed'
+                    scan.error_message = error_details or message or 'Vulnerability lookup failed'
+                    scan.completed_at = timezone.now()
             
             elif module == 'report':
                 if status == 'running':
@@ -391,22 +451,20 @@ class ScanStatusService:
                 elif status == 'completed':
                     scan.status = 'Completed'
                     scan.completed_at = timezone.now()
-                elif status == 'error':
-                    # Report generation failure shouldn't fail the entire scan
-                    # Just log the error but keep scan as completed
-                    logger.error(f"Report generation failed for scan {scan_id}: {error_details}")
-                    if scan.status == 'Report Generation Running':
-                        scan.status = 'Completed'
-                        scan.completed_at = timezone.now()
+                elif status == 'failed':
+                    scan.status = 'Failed'
+                    scan.error_message = error_details or message or 'Report generation failed'
+                    scan.completed_at = timezone.now()
             
+            # Save scan changes
             scan.save()
-            logger.info(f"Updated scan {scan_id} status: {module} -> {status}")
             
+            logger.info(f"Updated scan {scan_id} status for module {module}: {status}")
             return True
             
         except Scan.DoesNotExist:
             logger.error(f"Scan {scan_id} not found")
             return False
         except Exception as e:
-            logger.error(f"Error updating scan {scan_id} status: {str(e)}")
+            logger.error(f"Error updating scan status: {str(e)}")
             return False
