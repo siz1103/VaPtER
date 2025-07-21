@@ -324,4 +324,98 @@ class FingerprintScanner:
             
             # Validate message
             if not scan_id:
-                logger.error(f"Invalid fingerprin
+                logger.error(f"Invalid fingerprint request: {message}")
+                channel.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
+                return
+            
+            self.current_scan_id = scan_id
+            
+            # Publish initial status
+            self.publish_status_update(scan_id, 'started', 'Fingerprint scan started')
+            
+            # Get scan data
+            scan_data = self.get_scan_data(scan_id)
+            if not scan_data:
+                self.publish_status_update(scan_id, 'error', error_details='Failed to retrieve scan data')
+                channel.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
+                return
+            
+            # Extract ports from nmap results
+            nmap_results = scan_data.get('parsed_nmap_results', {})
+            if not nmap_results:
+                self.publish_status_update(scan_id, 'error', error_details='No nmap results available')
+                channel.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
+                return
+            
+            ports = self.extract_ports_from_nmap(nmap_results)
+            if not ports:
+                logger.warning(f"No open ports found for scan {scan_id}")
+                self.publish_status_update(scan_id, 'completed', 'No open ports to fingerprint')
+                channel.basic_ack(delivery_tag=method.delivery_tag)
+                return
+            
+            logger.info(f"Found {len(ports)} open ports to fingerprint")
+            
+            # Perform fingerprinting
+            fingerprint_results = self.fingerprint_all_ports(ports)
+            
+            # Save results
+            if self.save_fingerprint_results(scan_id, target_id or scan_data['target'], fingerprint_results):
+                self.publish_status_update(scan_id, 'completed', f'Fingerprinted {len(fingerprint_results)} ports successfully')
+            else:
+                self.publish_status_update(scan_id, 'error', error_details='Failed to save fingerprint results')
+            
+            # Acknowledge message
+            channel.basic_ack(delivery_tag=method.delivery_tag)
+            
+        except Exception as e:
+            logger.error(f"Error processing message: {str(e)}", exc_info=True)
+            self.publish_status_update(
+                self.current_scan_id, 
+                'error', 
+                error_details=f"Processing error: {str(e)}"
+            )
+            channel.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
+    
+    def start_consuming(self):
+        """Start consuming messages from RabbitMQ"""
+        if not self.connect_rabbitmq():
+            logger.error("Failed to connect to RabbitMQ, exiting...")
+            sys.exit(1)
+        
+        try:
+            # Set QoS
+            self.channel.basic_qos(prefetch_count=1)
+            
+            # Start consuming
+            self.channel.basic_consume(
+                queue=settings.FINGERPRINT_SCAN_REQUEST_QUEUE,
+                on_message_callback=self.process_message,
+                auto_ack=False
+            )
+            
+            logger.info(f"Started consuming from queue: {settings.FINGERPRINT_SCAN_REQUEST_QUEUE}")
+            
+            # Start consuming (blocking)
+            self.channel.start_consuming()
+            
+        except KeyboardInterrupt:
+            logger.info("Interrupted by user, shutting down...")
+            self.channel.stop_consuming()
+            self.connection.close()
+        except Exception as e:
+            logger.error(f"Error in consumer: {str(e)}")
+            if self.connection and not self.connection.is_closed:
+                self.connection.close()
+            sys.exit(1)
+
+
+def main():
+    """Main entry point"""
+    logger.info("Starting VaPtER Fingerprint Scanner...")
+    scanner = FingerprintScanner()
+    scanner.start_consuming()
+
+
+if __name__ == "__main__":
+    main()
