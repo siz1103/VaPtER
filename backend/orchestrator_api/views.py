@@ -10,7 +10,8 @@ from .models import Customer, PortList, ScanType, Target, Scan, ScanDetail
 from .serializers import (
     CustomerSerializer, PortListSerializer, ScanTypeSerializer,
     TargetSerializer, ScanSerializer, ScanDetailSerializer,
-    ScanCreateSerializer, ScanUpdateSerializer
+    ScanCreateSerializer, ScanUpdateSerializer,
+    FingerprintDetailSerializer, FingerprintDetailBulkCreateSerializer
 )
 from .filters import (
     CustomerFilter, TargetFilter, ScanFilter

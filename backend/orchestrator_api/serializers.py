@@ -2,7 +2,7 @@
 
 from rest_framework import serializers
 from django.core.exceptions import ValidationError as DjangoValidationError
-from .models import Customer, PortList, ScanType, Target, Scan, ScanDetail
+from .models import Customer, PortList, ScanType, Target, Scan, ScanDetail, FingerprintDetail
 
 
 class CustomerSerializer(serializers.ModelSerializer):
