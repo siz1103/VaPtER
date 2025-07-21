@@ -78,7 +78,7 @@ class FingerprintScanner:
     def test_fingerprintx(self):
         """Test if FingerprintX is installed and working"""
         try:
-            result = subprocess.run(['fingerprintx', '--version'], 
+            result = subprocess.run(['fingerprintx', '-h'], 
                                   capture_output=True, text=True)
             if result.returncode == 0:
                 logger.info(f"FingerprintX is installed: {result.stdout.strip()}")
