@@ -215,8 +215,8 @@ class FingerprintScanner:
             cmd = [
                 'fingerprintx',
                 '--json',
-                '-t', f'{settings.FINGERPRINT_TIMEOUT_PER_PORT}',
-                '--target', f'{host}:{port}'
+                '--timeout', f'{settings.FINGERPRINT_TIMEOUT_PER_PORT}',
+                '--targets', f'{host}:{port}'
             ]
             
             logger.debug(f"Running: {' '.join(cmd)}")
