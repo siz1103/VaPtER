@@ -6,7 +6,7 @@ from django.db.models import Q, Count
 from django.utils import timezone
 import logging
 
-from .models import Customer, PortList, ScanType, Target, Scan, ScanDetail
+from .models import Customer, PortList, ScanType, Target, Scan, ScanDetail, FingerprintDetail
 from .serializers import (
     CustomerSerializer, PortListSerializer, ScanTypeSerializer,
     TargetSerializer, ScanSerializer, ScanDetailSerializer,
