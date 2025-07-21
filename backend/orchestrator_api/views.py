@@ -148,7 +148,10 @@ class ScanTypeViewSet(viewsets.ModelViewSet):
 class TargetViewSet(viewsets.ModelViewSet):
     """ViewSet for Target CRUD operations"""
     
-    queryset = Target.objects.select_related('customer').all()
+    queryset = Target.objects.select_related('customer').prefetch_related(
+        'scans__details',  # Prefetch scan details per accedere a open_ports e os_guess
+        'scans'  # Prefetch tutte le scansioni
+    ).all()
     serializer_class = TargetSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_class = TargetFilter

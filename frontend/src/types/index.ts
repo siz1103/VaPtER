@@ -57,6 +57,8 @@ export interface Target {
     initiated_at: string
     completed_at?: string
   }
+  open_ports: number[]  // Array di numeri di porta (es: [22, 80, 443] o ["22", "80", "udp/53"])
+  os_guess?: string     // Nome dell'OS rilevato o null
   created_at: string
   updated_at: string
 }
