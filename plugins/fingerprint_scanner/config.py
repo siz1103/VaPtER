@@ -2,7 +2,7 @@ import os
 from typing import List
 
 
-class Settings:
+class settings:
     """Configuration settings for Fingerprint Scanner module"""
     
     # General settings
