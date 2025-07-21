@@ -136,3 +136,48 @@ export interface ApiError {
   error?: string
   [key: string]: any
 }
+
+export interface FingerprintDetail {
+  id: number;
+  scan: number;
+  target: number;
+  target_address: string;
+  port: number;
+  protocol: 'tcp' | 'udp';
+  service_name: string | null;
+  service_version: string | null;
+  service_product: string | null;
+  service_info: string | null;
+  fingerprint_method: string;
+  confidence_score: number;
+  raw_response: string | null;
+  additional_info: Record<string, any> | null;
+  created_at: string;
+  updated_at: string;
+  scan_status: string;
+}
+
+export interface FingerprintSummary {
+  scan_start: string;
+  scan_end: string;
+  total_ports_scanned: number;
+  services_identified: number;
+  fingerprint_summary: {
+    [portProtocol: string]: {
+      service: string;
+      version?: string;
+      product?: string;
+      confidence: number;
+    };
+  };
+}
+
+export interface ServiceSummaryResponse {
+  total_fingerprints: number;
+  unique_services: number;
+  services: Array<{
+    service_name: string;
+    service_version: string | null;
+    count: number;
+  }>;
+}
