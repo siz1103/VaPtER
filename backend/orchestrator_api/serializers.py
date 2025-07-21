@@ -2,7 +2,7 @@
 
 from rest_framework import serializers
 from django.core.exceptions import ValidationError as DjangoValidationError
-from .models import Customer, PortList, ScanType, Target, Scan, ScanDetail
+from .models import Customer, PortList, ScanType, Target, Scan, ScanDetail, FingerprintDetail
 
 
 class CustomerSerializer(serializers.ModelSerializer):
@@ -371,3 +371,44 @@ class ScanUpdateSerializer(serializers.ModelSerializer):
             # Add status transition validation logic here if needed
             # For now, allow any transition (will be refined later)
         return value
+    
+class FingerprintDetailSerializer(serializers.ModelSerializer):
+    """Serializer for FingerprintDetail model"""
+    
+    target_address = serializers.CharField(source='target.address', read_only=True)
+    scan_status = serializers.CharField(source='scan.status', read_only=True)
+    
+    class Meta:
+        model = FingerprintDetail
+        fields = [
+            'id', 'scan', 'target', 'target_address', 'port', 'protocol',
+            'service_name', 'service_version', 'service_product', 'service_info',
+            'fingerprint_method', 'confidence_score', 'raw_response', 
+            'additional_info', 'created_at', 'updated_at', 'scan_status'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+    
+    def validate_confidence_score(self, value):
+        """Ensure confidence score is between 0 and 100"""
+        if value < 0 or value > 100:
+            raise serializers.ValidationError("Confidence score must be between 0 and 100")
+        return value
+
+
+class FingerprintDetailBulkCreateSerializer(serializers.Serializer):
+    """Serializer for bulk creating fingerprint details"""
+    fingerprint_details = FingerprintDetailSerializer(many=True)
+    
+    def create(self, validated_data):
+        """Bulk create fingerprint details"""
+        fingerprint_details_data = validated_data.get('fingerprint_details', [])
+        
+        # Create FingerprintDetail objects
+        fingerprint_objects = []
+        for detail_data in fingerprint_details_data:
+            fingerprint_objects.append(FingerprintDetail(**detail_data))
+        
+        # Bulk create
+        created_objects = FingerprintDetail.objects.bulk_create(fingerprint_objects)
+        
+        return {'fingerprint_details': created_objects}

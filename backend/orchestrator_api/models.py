@@ -1,6 +1,7 @@
 import uuid
 from django.db import models
 from django.core.validators import RegexValidator
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.exceptions import ValidationError
 import ipaddress
 
@@ -368,3 +369,55 @@ class ScanDetail(TimestampMixin, SoftDeleteMixin):
     
     def __str__(self):
         return f"Details for Scan #{self.scan.id}"
+    
+class FingerprintDetail(TimestampMixin, SoftDeleteMixin):
+    """Detailed fingerprint results for each port/service"""
+    
+    id = models.AutoField(primary_key=True)
+    scan = models.ForeignKey(
+        Scan,
+        on_delete=models.CASCADE,
+        related_name='fingerprint_details'
+    )
+    target = models.ForeignKey(
+        Target,
+        on_delete=models.CASCADE,
+        related_name='fingerprint_details'
+    )
+    port = models.IntegerField()
+    protocol = models.CharField(
+        max_length=10,
+        choices=[('tcp', 'TCP'), ('udp', 'UDP')],
+        default='tcp'
+    )
+    service_name = models.CharField(max_length=100, null=True, blank=True)
+    service_version = models.CharField(max_length=255, null=True, blank=True)
+    service_product = models.CharField(max_length=255, null=True, blank=True)
+    service_info = models.TextField(null=True, blank=True)
+    fingerprint_method = models.CharField(
+        max_length=50,
+        help_text="Method used for fingerprinting (e.g., fingerprintx, banner)"
+    )
+    confidence_score = models.IntegerField(
+        default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        help_text="Confidence score 0-100"
+    )
+    raw_response = models.TextField(null=True, blank=True)
+    additional_info = models.JSONField(null=True, blank=True)
+    
+    objects = SoftDeleteManager()
+    all_objects = models.Manager()
+    
+    class Meta:
+        db_table = 'fingerprint_detail'
+        ordering = ['scan', 'port']
+        verbose_name = 'Fingerprint Detail'
+        verbose_name_plural = 'Fingerprint Details'
+        indexes = [
+            models.Index(fields=['scan', 'port']),
+            models.Index(fields=['target', 'port']),
+        ]
+    
+    def __str__(self):
+        return f"Fingerprint - {self.target.address}:{self.port}/{self.protocol} - {self.service_name or 'Unknown'}"

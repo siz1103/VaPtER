@@ -161,12 +161,36 @@ services:
     networks:
       - vapter_network
     restart: unless-stopped
+
+  fingerprint_scanner:
+    build: ./plugins/fingerprint_scanner
+    container_name: vapter_fingerprint_scanner
+    restart: unless-stopped
+    environment:
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - INTERNAL_API_GATEWAY_URL=http://api_gateway:8080
+      - RABBITMQ_URL=amqp://vapter:vapter123@rabbitmq:5672/
+      - RABBITMQ_FINGERPRINT_SCAN_REQUEST_QUEUE=fingerprint_scan_requests
+      - RABBITMQ_SCAN_STATUS_UPDATE_QUEUE=scan_status_updates
+      - FINGERPRINT_TIMEOUT_PER_PORT=60
+      - MAX_CONCURRENT_FINGERPRINTS=10
+    depends_on:
+      - rabbitmq
+      - api_gateway
+    networks:
+      - vapter_network
+    volumes:
+      - fingerprint_results:/tmp/fingerprint_results
+    cap_add:
+    - NET_RAW
+    - NET_ADMIN # Spesso necessario per operazioni di rete più ampie, includilo per sicurezza.
     
 volumes:
   postgres_data:
   rabbitmq_data:
   backend_media:
   nmap_temp_results:
+  fingerprint_results:
   
 networks:
   vapter_network:
