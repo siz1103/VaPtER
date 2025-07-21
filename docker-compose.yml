@@ -181,6 +181,9 @@ services:
       - vapter_network
     volumes:
       - fingerprint_results:/tmp/fingerprint_results
+    cap_add:
+    - NET_RAW
+    - NET_ADMIN # Spesso necessario per operazioni di rete più ampie, includilo per sicurezza.
     
 volumes:
   postgres_data:

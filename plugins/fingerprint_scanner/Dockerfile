@@ -44,7 +44,7 @@ RUN useradd -m -u 1000 fingerprint_user && \
     chown -R fingerprint_user:fingerprint_user /app /tmp/fingerprint_results
 
 # Set capabilities for fingerprintx binary to allow raw socket operations
-RUN setcap cap_net_raw,cap_net_admin,cap_net_bind_service+eip /usr/local/bin/fingerprintx || true
+RUN setcap cap_net_raw,cap_net_admin,cap_net_bind_service+eip /usr/local/bin/fingerprintx
 
 # Switch to non-root user
 USER fingerprint_user

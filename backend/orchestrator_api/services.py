@@ -86,7 +86,7 @@ class RabbitMQService:
 
 class ScanOrchestratorService:
     """Service for orchestrating scan workflows"""
-    
+
     @staticmethod
     def start_scan(scan):
         """Start a scan by publishing to appropriate queue"""
@@ -295,8 +295,10 @@ class ScanOrchestratorService:
                 'timestamp': timezone.now().isoformat()
             }
             
+            logger.info(f"queue_name: {queue_name}")
+            logger.info(f"message: {message}")
             # Send to appropriate queue
-            return MessageQueueService.publish_message(queue_name, message)
+            return RabbitMQService.publish_message(queue_name, message)
             
         except Exception as e:
             logger.error(f"Error starting {plugin_name} scan for scan {scan.id}: {str(e)}")
