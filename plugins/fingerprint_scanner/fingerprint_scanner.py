@@ -27,8 +27,9 @@ from typing import Dict, List, Tuple, Optional, Any
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Configure logging
+log_level = os.getenv('LOG_LEVEL', 'INFO')
 logging.basicConfig(
-    level=logging.INFO,
+    level=getattr(logging, log_level.upper(), logging.INFO),
     format='%(asctime)s - **%(name)s** - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
@@ -200,12 +201,76 @@ class FingerprintScanner:
         logger.info(f"Total open ports found: {len(ports)}")
         return ports
     
+    def parse_banner(self, banner: str, protocol: str) -> Tuple[str, str]:
+        """Parse banner to extract service product and version
+        Returns: (service_product, service_version)
+        """
+        if not banner:
+            return ('', '')
+        
+        # SSH banner format: SSH-{version}-{software}
+        if protocol == 'ssh' and banner.startswith('SSH-'):
+            parts = banner.split('-', 2)
+            if len(parts) >= 3:
+                version_info = parts[2].strip()
+                # Extract software name and version (e.g., "OpenSSH_9.6p1 Ubuntu-3ubuntu13.12")
+                if '_' in version_info:
+                    software_parts = version_info.split('_', 1)
+                    service_product = software_parts[0]  # "OpenSSH"
+                    # Extract just the version number
+                    version_full = software_parts[1]
+                    service_version = version_full.split()[0]  # "9.6p1"
+                    return (service_product, service_version)
+                else:
+                    return ('SSH', parts[1])
+        
+        # SMTP banner format: 220 {hostname} ESMTP {software} {version}
+        elif protocol == 'smtp' and banner.startswith('220'):
+            parts = banner.split()
+            if 'ESMTP' in parts:
+                esmtp_index = parts.index('ESMTP')
+                if esmtp_index + 1 < len(parts):
+                    service_product = parts[esmtp_index + 1]  # "Exim"
+                    service_version = parts[esmtp_index + 2] if esmtp_index + 2 < len(parts) else ''  # "4.92"
+                    return (service_product, service_version)
+        
+        # HTTP Server header format: Server: {software}/{version}
+        elif protocol in ['http', 'https']:
+            if '/' in banner:
+                parts = banner.split('/', 1)
+                return (parts[0].strip(), parts[1].strip())
+            elif banner:
+                # Just product name without version
+                return (banner.strip(), '')
+        
+        # FTP banner
+        elif protocol == 'ftp' and banner.startswith('220'):
+            # Try to extract version info from FTP banner
+            parts = banner.split()
+            for i, part in enumerate(parts):
+                if '/' in part:
+                    product_version = part.split('/', 1)
+                    return (product_version[0], product_version[1])
+                elif any(char.isdigit() for char in part) and i > 0:
+                    # Previous part might be the product
+                    return (parts[i-1], part)
+        
+        # Generic parsing for other protocols
+        # Look for patterns like "software/version" or "software version"
+        if '/' in banner:
+            parts = banner.split('/', 1)
+            if len(parts) >= 2:
+                return (parts[0].strip(), parts[1].split()[0].strip())
+        
+        # If no specific parsing worked, return empty
+        return ('', '')
+
     def fingerprint_port(self, host: str, port: int, protocol: str = 'tcp') -> Dict[str, Any]:
         """Fingerprint a single port using FingerprintX"""
         result = {
             'host': host,
             'port': port,
-            'protocol': protocol,
+            'transport_protocol': protocol,  # tcp/udp
             'status': 'unknown',
             'error': None
         }
@@ -233,20 +298,41 @@ class FingerprintScanner:
                 try:
                     # Parse JSON output
                     fingerprint_data = json.loads(process.stdout.strip())
+                    logger.debug(f"Raw FingerprintX output for {host}:{port}: {json.dumps(fingerprint_data, indent=2)}")
                     
-                    # FingerprintX returns an array of results
-                    if isinstance(fingerprint_data, list) and len(fingerprint_data) > 0:
-                        fp_result = fingerprint_data[0]
+                    # Process the raw FingerprintX output
+                    # FingerprintX can return either a single object or an array
+                    if fingerprint_data:
+                        # Handle both single object and array response
+                        if isinstance(fingerprint_data, list):
+                            fp_result = fingerprint_data[0] if fingerprint_data else {}
+                        else:
+                            fp_result = fingerprint_data
                         
-                        result['status'] = 'success'
-                        result['service_name'] = fp_result.get('service', 'unknown')
-                        result['service_version'] = fp_result.get('version', '')
-                        result['service_product'] = fp_result.get('product', '')
-                        result['banner'] = fp_result.get('banner', '')
-                        result['confidence'] = fp_result.get('confidence', 0)
-                        result['raw_response'] = process.stdout
+                        # Extract application protocol (ssh, http, etc.) - this goes to service_name
+                        service_name = fp_result.get('protocol', 'unknown')
                         
-                        logger.info(f"Fingerprinted {host}:{port} - {result['service_name']} {result['service_version']}")
+                        # Extract metadata
+                        metadata = fp_result.get('metadata', {})
+                        banner = metadata.get('banner', '')
+                        
+                        # Parse banner to get service product and version
+                        service_product, service_version = self.parse_banner(banner, service_name)
+                        
+                        # Even if we don't have a perfect match, if we have a protocol, it's a success
+                        if service_name != 'unknown' or banner:
+                            result['status'] = 'success'
+                        else:
+                            result['status'] = 'no_match'
+                        
+                        result['service_name'] = service_name  # Application protocol (ssh, http, etc.)
+                        result['service_product'] = service_product  # Software name (OpenSSH, nginx, etc.)
+                        result['service_version'] = service_version  # Version (9.6p1, 1.18.0, etc.)
+                        result['banner'] = banner
+                        result['metadata'] = metadata
+                        result['raw_response'] = json.dumps(fingerprint_data)  # Store as JSON string
+                        
+                        logger.info(f"Fingerprinted {host}:{port}/{protocol} - service_name:{service_name} - product:{service_product} version:{service_version}")
                     else:
                         result['status'] = 'no_match'
                         result['raw_response'] = process.stdout
@@ -313,7 +399,7 @@ class FingerprintScanner:
                     results.append({
                         'host': host,
                         'port': port,
-                        'protocol': protocol,
+                        'transport_protocol': protocol,
                         'status': 'error',
                         'error': str(e)
                     })
@@ -326,28 +412,69 @@ class FingerprintScanner:
             successful_saves = 0
             
             for result in results:
-                # Skip failed fingerprints unless we want to save errors
-                if result.get('status') not in ['success', 'no_match']:
-                    continue
+                # Save results that have useful information
+                if result.get('status') in ['success', 'no_match']:
+                    # Skip only if we have no useful data at all
+                    if (result.get('service_name') == 'unknown' and 
+                        not result.get('banner') and 
+                        not result.get('metadata')):
+                        continue
+                
+                # Prepare structured metadata
+                additional_info = {
+                    'host': result['host'],
+                    'scan_timestamp': datetime.utcnow().isoformat(),
+                    'status': result['status']
+                }
+                
+                # Add metadata if available
+                if result.get('metadata'):
+                    # Convert metadata to a more readable format
+                    metadata = result['metadata']
+                    if isinstance(metadata, dict):
+                        # Extract important fields
+                        if 'banner' in metadata:
+                            additional_info['banner'] = metadata['banner']
+                        if 'algo' in metadata:
+                            # Parse SSH algorithms
+                            additional_info['ssh_algorithms'] = metadata['algo']
+                        if 'passwordAuthEnabled' in metadata:
+                            additional_info['password_auth_enabled'] = metadata['passwordAuthEnabled']
+                        # Add any other metadata fields
+                        for key, value in metadata.items():
+                            if key not in ['banner', 'algo', 'passwordAuthEnabled'] and value:
+                                additional_info[key] = value
+                
+                # Build service_info field with additional details
+                service_info_parts = []
+                if result.get('banner'):
+                    # Extract extra info from banner that wasn't captured in product/version
+                    banner = result['banner']
+                    if 'Ubuntu' in banner:
+                        service_info_parts.append('Ubuntu Linux')
+                    elif 'Debian' in banner:
+                        service_info_parts.append('Debian Linux')
+                    elif 'CentOS' in banner:
+                        service_info_parts.append('CentOS Linux')
+                    elif 'protocol 2.0' in banner.lower():
+                        service_info_parts.append('protocol 2.0')
+                
+                service_info = '; '.join(service_info_parts) if service_info_parts else None
                 
                 # Prepare data for API
                 fingerprint_data = {
                     'scan': scan_id,
                     'target': target_id,
-                    'port': result['port'],
-                    'protocol': result['protocol'],
-                    'service_name': result.get('service_name', 'unknown'),
-                    'service_version': result.get('service_version', ''),
-                    'service_product': result.get('service_product', ''),
+                    'port': result['port'],  # Integer port number
+                    'protocol': result.get('transport_protocol', 'tcp'),  # Transport protocol (tcp/udp)
+                    'service_name': result.get('service_name', 'unknown'),  # Application protocol (ssh, http, etc.)
+                    'service_version': result.get('service_version', ''),  # Version (9.6p1, etc.)
+                    'service_product': result.get('service_product', ''),  # Product (OpenSSH, nginx, etc.)
+                    'service_info': service_info,  # Additional service information
                     'fingerprint_method': 'fingerprintx',
-                    'confidence_score': result.get('confidence', 0),
+                    'confidence_score': 95 if result.get('status') == 'success' else 50,  # Lower confidence for no_match
                     'raw_response': result.get('raw_response', ''),
-                    'additional_info': {
-                        'host': result['host'],
-                        'banner': result.get('banner', ''),
-                        'scan_timestamp': datetime.utcnow().isoformat(),
-                        'status': result['status']
-                    }
+                    'additional_info': additional_info
                 }
                 
                 # Send to API
@@ -360,7 +487,7 @@ class FingerprintScanner:
                 
                 if response.status_code == 201:
                     successful_saves += 1
-                    logger.debug(f"Saved fingerprint for port {result['port']}")
+                    logger.debug(f"Saved fingerprint for port {result['port']}/{result.get('transport_protocol', 'tcp')}")
                 else:
                     logger.error(f"Failed to save fingerprint: {response.status_code} - {response.text}")
             
@@ -399,15 +526,15 @@ class FingerprintScanner:
         }
         
         for result in results:
-            if result.get('status') == 'success' and result.get('service_name') not in ['unknown', 'error'] and result.get('service_name'):
-                port_key = f"{result['port']}/{result['protocol']}"
+            if result.get('status') == 'success':
+                port_key = f"{result['port']}/{result.get('transport_protocol', 'tcp')}"
                 summary['fingerprint_summary'][port_key] = {
-                    'service': result['service_name'],
-                    'version': result.get('service_version'),
-                    'product': result.get('service_product'),
-                    'confidence': result.get('confidence', 0)
+                    'service': result.get('service_name', 'unknown'),  # Application protocol
+                    'product': result.get('service_product', ''),      # Software name
+                    'version': result.get('service_version', '')       # Version
                 }
-                summary['services_identified'] += 1
+                if result.get('service_name') not in ['unknown', None, '']:
+                    summary['services_identified'] += 1
         
         return summary
     
