@@ -112,10 +112,12 @@ class FingerprintScanner:
         
         for host in nmap_results.get('hosts', []):
             host_ip = host.get('ip')
+            logger.info(f"host in function: {host_ip}")
             if not host_ip:
                 continue
             
             for port_info in host.get('ports', []):
+                logger.info(f"port_info in function: {port_info}")
                 if port_info.get('state') == 'open':
                     port_num = int(port_info.get('portid', 0))
                     protocol = port_info.get('protocol', 'tcp')
@@ -346,8 +348,9 @@ class FingerprintScanner:
                 self.publish_status_update(scan_id, 'error', error_details='No nmap results available')
                 channel.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
                 return
-            
+            logger.info(f"nmap_results: {nmap_results}")
             ports = self.extract_ports_from_nmap(nmap_results)
+            logger.info(f"ports: {ports}")
             if not ports:
                 logger.warning(f"No open ports found for scan {scan_id}")
                 self.publish_status_update(scan_id, 'completed', 'No open ports to fingerprint')
