@@ -297,9 +297,16 @@ class ScanOrchestratorService:
             
             logger.info(f"queue_name: {queue_name}")
             logger.info(f"message: {message}")
-            # Send to appropriate queue
-            return RabbitMQService.publish_message(queue_name, message)
+#            # Send to appropriate queue
+#            return RabbitMQService.publish_message(queue_name, message)
+            # Crea un'istanza di RabbitMQService
+            rabbitmq_service = RabbitMQService() # Aggiungi questa riga
             
+            # Send to appropriate queue
+            success = rabbitmq_service.publish_message(queue_name, message) # Modifica questa riga
+            rabbitmq_service.close() # Aggiungi questa riga per chiudere la connessione
+            return success
+
         except Exception as e:
             logger.error(f"Error starting {plugin_name} scan for scan {scan.id}: {str(e)}")
             return False
