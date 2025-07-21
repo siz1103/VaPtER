@@ -131,12 +131,15 @@ class TargetSerializer(serializers.ModelSerializer):
     customer_name = serializers.CharField(source='customer.name', read_only=True)
     scans_count = serializers.SerializerMethodField()
     last_scan = serializers.SerializerMethodField()
+    open_ports = serializers.SerializerMethodField()
+    os_guess = serializers.SerializerMethodField()
     
     class Meta:
         model = Target
         fields = [
             'id', 'customer', 'customer_name', 'name', 'address',
-            'description', 'created_at', 'updated_at', 'scans_count', 'last_scan'
+            'description', 'created_at', 'updated_at', 'scans_count', 
+            'last_scan', 'open_ports', 'os_guess'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
     
@@ -154,6 +157,47 @@ class TargetSerializer(serializers.ModelSerializer):
                 'initiated_at': last_scan.initiated_at,
                 'completed_at': last_scan.completed_at
             }
+        return None
+    
+    def get_open_ports(self, obj):
+        """Get list of open ports from last completed scan"""
+        # Trova l'ultima scansione completata
+        last_completed_scan = obj.scans.filter(status='Completed').first()
+        
+        if last_completed_scan and hasattr(last_completed_scan, 'details'):
+            scan_detail = last_completed_scan.details
+            if scan_detail.open_ports:
+                # Estrai solo i numeri delle porte
+                ports = []
+                
+                # Aggiungi porte TCP
+                tcp_ports = scan_detail.open_ports.get('tcp', [])
+                for port_info in tcp_ports:
+                    port_num = port_info.get('port')
+                    if port_num:
+                        ports.append(port_num)
+                
+                # Aggiungi porte UDP con prefisso 'udp/'
+                udp_ports = scan_detail.open_ports.get('udp', [])
+                for port_info in udp_ports:
+                    port_num = port_info.get('port')
+                    if port_num:
+                        ports.append(f"udp/{port_num}")
+                
+                return sorted(ports, key=lambda x: int(x.replace('udp/', '')) if isinstance(x, str) and 'udp/' in x else int(x))
+        
+        return []
+    
+    def get_os_guess(self, obj):
+        """Get OS guess from last completed scan"""
+        # Trova l'ultima scansione completata
+        last_completed_scan = obj.scans.filter(status='Completed').first()
+        
+        if last_completed_scan and hasattr(last_completed_scan, 'details'):
+            scan_detail = last_completed_scan.details
+            if scan_detail.os_guess and scan_detail.os_guess.get('name'):
+                return scan_detail.os_guess.get('name')
+        
         return None
     
     def validate_address(self, value):
@@ -230,7 +274,6 @@ class TargetSerializer(serializers.ModelSerializer):
                 )
         
         return data
-
 
 class ScanDetailSerializer(serializers.ModelSerializer):
     """Serializer for ScanDetail model"""

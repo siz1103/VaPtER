@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { MoreHorizontal, Edit, Trash2, Scan as ScanIcon, Activity, Shield, Network, AlertTriangle } from 'lucide-react'
+import { MoreHorizontal, Edit, Trash2, Scan as ScanIcon, Activity, Shield, Network, AlertTriangle, Monitor } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -70,7 +70,7 @@ export default function TargetTable({ targets, onEdit, searchTerm }: TargetTable
     onError: (error: any) => {
       toast({
         title: 'Error',
-        description: error.response?.data?.detail || 'Failed to delete target.',
+        description: error.response?.data?.detail || 'Failed to delete target. Please check your connection and try again.',
         variant: 'destructive',
       })
     },
@@ -117,16 +117,28 @@ export default function TargetTable({ targets, onEdit, searchTerm }: TargetTable
     )
   }
   
-  // Mock function to get vulnerabilities count - will be replaced with real data
+  // Function to get vulnerabilities count - will be replaced with real data
   const getVulnerabilitiesCount = (target: Target) => {
-    // This would come from the last scan results
+    // This would come from the last scan results - for now return 0
     return 0
   }
   
-  // Mock function to get open ports - will be replaced with real data
-  const getOpenPorts = (target: Target) => {
-    // This would come from the last scan results
-    return []
+  // Format open ports for display
+  const formatOpenPorts = (ports: number[] | string[]) => {
+    if (!ports || ports.length === 0) return '-'
+    
+    // Convert all to string for consistent display
+    const portStrings = ports.map(p => String(p))
+    
+    // Show first 3 ports
+    const displayPorts = portStrings.slice(0, 3).join(', ')
+    
+    // Add count if more than 3
+    if (portStrings.length > 3) {
+      return `${displayPorts} +${portStrings.length - 3}`
+    }
+    
+    return displayPorts
   }
   
   return (
@@ -137,6 +149,7 @@ export default function TargetTable({ targets, onEdit, searchTerm }: TargetTable
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Address</TableHead>
+              <TableHead>OS</TableHead>
               <TableHead>Scans</TableHead>
               <TableHead>Last Scan</TableHead>
               <TableHead>Vulnerabilities</TableHead>
@@ -148,14 +161,13 @@ export default function TargetTable({ targets, onEdit, searchTerm }: TargetTable
           <TableBody>
             {filteredTargets.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                   {searchTerm ? 'No targets match your search.' : 'No targets found. Create your first target to get started.'}
                 </TableCell>
               </TableRow>
             ) : (
               filteredTargets.map((target) => {
                 const vulnCount = getVulnerabilitiesCount(target)
-                const openPorts = getOpenPorts(target)
                 
                 return (
                   <TableRow key={target.id}>
@@ -179,6 +191,18 @@ export default function TargetTable({ targets, onEdit, searchTerm }: TargetTable
                       </div>
                     </TableCell>
                     <TableCell>
+                      <div className="flex items-center space-x-1">
+                        {target.os_guess ? (
+                          <>
+                            <Monitor className="h-3 w-3 text-blue-500" />
+                            <span className="text-sm">{target.os_guess}</span>
+                          </>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">-</span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
                       <span className="text-sm">{target.scans_count || 0}</span>
                     </TableCell>
                     <TableCell>
@@ -197,14 +221,9 @@ export default function TargetTable({ targets, onEdit, searchTerm }: TargetTable
                       </div>
                     </TableCell>
                     <TableCell>
-                      {openPorts.length > 0 ? (
-                        <span className="text-sm">
-                          {openPorts.slice(0, 3).join(', ')}
-                          {openPorts.length > 3 && ` +${openPorts.length - 3}`}
-                        </span>
-                      ) : (
-                        <span className="text-sm text-muted-foreground">-</span>
-                      )}
+                      <span className="text-sm font-mono">
+                        {formatOpenPorts(target.open_ports)}
+                      </span>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {formatDate(target.created_at)}
@@ -252,38 +271,36 @@ export default function TargetTable({ targets, onEdit, searchTerm }: TargetTable
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
               This will permanently delete the target "{targetToDelete?.name}" ({targetToDelete?.address}).
-              This action cannot be undone. All scan history for this target will also be deleted.
+              This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => setTargetToDelete(null)}>
+              Cancel
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteConfirm}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              disabled={deleteMutation.isPending}
             >
-              {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
       
       {/* Start Scan Dialog */}
-      <Dialog open={scanDialogOpen} onOpenChange={setScanDialogOpen}>
-        {targetToScan && (
-          <StartScanDialog 
-            target={targetToScan}
-            onSuccess={() => {
-              setScanDialogOpen(false)
-              setTargetToScan(null)
-            }}
-            onCancel={() => {
-              setScanDialogOpen(false)
-              setTargetToScan(null)
-            }}
-          />
-        )}
-      </Dialog>
+      {targetToScan && (
+        <StartScanDialog
+          open={scanDialogOpen}
+          onOpenChange={setScanDialogOpen}
+          target={targetToScan}
+          onSuccess={() => {
+            setScanDialogOpen(false)
+            setTargetToScan(null)
+            queryClient.invalidateQueries({ queryKey: ['targets'] })
+          }}
+        />
+      )}
     </>
   )
 }
