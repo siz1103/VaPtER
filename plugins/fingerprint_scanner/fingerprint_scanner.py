@@ -106,6 +106,7 @@ class FingerprintScanner:
         """Extract open ports from nmap results
         Returns: List of tuples (ip, port, protocol)
         """
+        logger.info(f"nmap_results in function: {nmap_results}")
         ports = []
         if not nmap_results or 'hosts' not in nmap_results:
             return ports
