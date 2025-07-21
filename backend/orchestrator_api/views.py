@@ -15,7 +15,7 @@ from .serializers import (
 from .filters import (
     CustomerFilter, TargetFilter, ScanFilter
 )
-from .services import ScanOrchestratorService
+from .services import ScanOrchestratorService, NmapResultsParser
 
 logger = logging.getLogger(__name__)
 
@@ -236,6 +236,47 @@ class ScanViewSet(viewsets.ModelViewSet):
             return ScanUpdateSerializer
         return ScanSerializer
     
+    def perform_update(self, serializer):
+        """
+        Override to process nmap results when they are received
+        """
+        # Controlla se parsed_nmap_results è stato aggiornato
+        if 'parsed_nmap_results' in serializer.validated_data:
+            logger.info(f"Detected nmap results update for scan {serializer.instance.id}")
+        
+        # Salva le modifiche
+        scan = serializer.save()
+        
+        # Se sono stati aggiornati i risultati nmap, processali
+        if 'parsed_nmap_results' in serializer.validated_data and scan.parsed_nmap_results:
+            logger.info(f"Processing nmap results for scan {scan.id}")
+            from .services import NmapResultsParser
+            NmapResultsParser.process_nmap_results(scan)
+    
+    def update(self, request, *args, **kwargs):
+        """
+        Override update to handle nmap results processing
+        """
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+
+        if getattr(instance, '_prefetched_objects_cache', None):
+            # If 'prefetch_related' has been applied to a queryset, we need to
+            # forcibly invalidate the prefetch cache on the instance.
+            instance._prefetched_objects_cache = {}
+
+        return Response(serializer.data)
+    
+    def partial_update(self, request, *args, **kwargs):
+        """
+        Override partial_update to ensure it uses our custom update logic
+        """
+        kwargs['partial'] = True
+        return self.update(request, *args, **kwargs)
+    
     def perform_create(self, serializer):
         """Create a new scan and start orchestration"""
         scan = serializer.save()
@@ -337,7 +378,6 @@ class ScanViewSet(viewsets.ModelViewSet):
             'status_distribution': status_distribution,
             'recent_scans': recent_scans_data
         })
-
 
 class ScanDetailViewSet(viewsets.ModelViewSet):
     """ViewSet for ScanDetail CRUD operations"""

@@ -472,3 +472,143 @@ class ScanStatusService:
         except Exception as e:
             logger.error(f"Error updating scan status: {str(e)}")
             return False
+        
+class NmapResultsParser:
+    """Service for parsing nmap results and extracting relevant data"""
+    
+    @staticmethod
+    def extract_open_ports(parsed_nmap_results):
+        """
+        Extract open ports from nmap results
+        
+        Returns:
+            dict: {"tcp": [...], "udp": [...]}
+        """
+        open_ports = {"tcp": [], "udp": []}
+        
+        try:
+            if not parsed_nmap_results or 'hosts' not in parsed_nmap_results:
+                return open_ports
+            
+            # Assumiamo sempre un singolo host
+            hosts = parsed_nmap_results.get('hosts', [])
+            if not hosts:
+                return open_ports
+            
+            host = hosts[0]  # Prendiamo sempre il primo host
+            ports = host.get('ports', [])
+            
+            for port in ports:
+                protocol = port.get('protocol', 'tcp')
+                port_data = {
+                    'port': int(port.get('portid', 0)),
+                    'state': port.get('state', 'unknown')
+                }
+                
+                # Aggiungi informazioni sul servizio se disponibili
+                service = port.get('service', {})
+                if service:
+                    port_data['service'] = service.get('name', '')
+                    if service.get('product'):
+                        port_data['product'] = service.get('product')
+                    if service.get('version'):
+                        port_data['version'] = service.get('version')
+                    if service.get('extrainfo'):
+                        port_data['extrainfo'] = service.get('extrainfo')
+                
+                # Aggiungi solo porte aperte
+                if port_data['state'] == 'open':
+                    if protocol == 'tcp':
+                        open_ports['tcp'].append(port_data)
+                    elif protocol == 'udp':
+                        open_ports['udp'].append(port_data)
+            
+            # Ordina le porte per numero
+            open_ports['tcp'].sort(key=lambda x: x['port'])
+            open_ports['udp'].sort(key=lambda x: x['port'])
+            
+            logger.info(f"Extracted {len(open_ports['tcp'])} TCP and {len(open_ports['udp'])} UDP open ports")
+            
+        except Exception as e:
+            logger.error(f"Error extracting open ports: {str(e)}")
+        
+        return open_ports
+    
+    @staticmethod
+    def extract_os_guess(parsed_nmap_results):
+        """
+        Extract OS guess from nmap results
+        
+        Returns:
+            dict: OS information or empty dict
+        """
+        os_guess = {}
+        
+        try:
+            if not parsed_nmap_results or 'hosts' not in parsed_nmap_results:
+                return os_guess
+            
+            # Assumiamo sempre un singolo host
+            hosts = parsed_nmap_results.get('hosts', [])
+            if not hosts:
+                return os_guess
+            
+            host = hosts[0]  # Prendiamo sempre il primo host
+            os_info = host.get('os', {})
+            
+            if os_info:
+                # Estrai informazioni OS
+                os_guess = {
+                    'name': os_info.get('name', ''),
+                    'accuracy': os_info.get('accuracy', ''),
+                    'line': os_info.get('line', '')
+                }
+                
+                # Aggiungi informazioni aggiuntive se disponibili
+                if os_info.get('vendor'):
+                    os_guess['vendor'] = os_info.get('vendor')
+                if os_info.get('type'):
+                    os_guess['type'] = os_info.get('type')
+                if os_info.get('osfamily'):
+                    os_guess['osfamily'] = os_info.get('osfamily')
+                if os_info.get('osgen'):
+                    os_guess['osgen'] = os_info.get('osgen')
+                
+                logger.info(f"Extracted OS guess: {os_guess.get('name', 'Unknown')} with {os_guess.get('accuracy', '0')}% accuracy")
+            
+        except Exception as e:
+            logger.error(f"Error extracting OS guess: {str(e)}")
+        
+        return os_guess
+    
+    @staticmethod
+    def process_nmap_results(scan):
+        """
+        Process nmap results and update ScanDetail
+        
+        Args:
+            scan: Scan instance with parsed_nmap_results
+        """
+        try:
+            if not scan.parsed_nmap_results:
+                logger.warning(f"No nmap results to process for scan {scan.id}")
+                return
+            
+            # Crea o ottieni ScanDetail
+            scan_detail, created = ScanDetail.objects.get_or_create(scan=scan)
+            
+            # Estrai porte aperte
+            open_ports = NmapResultsParser.extract_open_ports(scan.parsed_nmap_results)
+            scan_detail.open_ports = open_ports
+            
+            # Estrai OS guess
+            os_guess = NmapResultsParser.extract_os_guess(scan.parsed_nmap_results)
+            scan_detail.os_guess = os_guess
+            
+            # Salva
+            scan_detail.save()
+            
+            logger.info(f"Successfully processed nmap results for scan {scan.id}")
+            
+        except Exception as e:
+            logger.error(f"Error processing nmap results for scan {scan.id}: {str(e)}")
