@@ -6,7 +6,7 @@ from django.urls import reverse
 from django.utils.safestring import mark_safe
 import json
 
-from .models import Customer, PortList, ScanType, Target, Scan, ScanDetail
+from .models import Customer, PortList, ScanType, Target, Scan, ScanDetail, FingerprintDetail
 
 
 @admin.register(Customer)
@@ -415,7 +415,67 @@ class ScanDetailAdmin(admin.ModelAdmin):
         return '-'
     os_guess_formatted.short_description = 'OS Detection (Formatted)'
 
-
+@admin.register(FingerprintDetail)
+class FingerprintDetailAdmin(admin.ModelAdmin):
+    """Admin configuration for FingerprintDetail model"""
+    
+    list_display = [
+        'scan_id', 'target_address', 'port_display', 'service_name', 
+        'service_version', 'confidence_score', 'fingerprint_method', 'created_at'
+    ]
+    list_filter = [
+        'protocol', 'service_name', 'fingerprint_method', 'confidence_score', 
+        'created_at', 'scan__status'
+    ]
+    search_fields = [
+        'target__address', 'service_name', 'service_version', 'service_product',
+        'port'
+    ]
+    readonly_fields = ['created_at', 'updated_at', 'deleted_at']
+    
+    fieldsets = (
+        ('Scan Information', {
+            'fields': ('scan', 'target')
+        }),
+        ('Port & Service Details', {
+            'fields': ('port', 'protocol', 'service_name', 'service_version', 
+                      'service_product', 'service_info')
+        }),
+        ('Fingerprint Information', {
+            'fields': ('fingerprint_method', 'confidence_score', 'raw_response')
+        }),
+        ('Additional Data', {
+            'fields': ('additional_info',),
+            'classes': ('collapse',)
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at', 'deleted_at'),
+            'classes': ('collapse',)
+        })
+    )
+    
+    def scan_id(self, obj):
+        """Display scan ID with link"""
+        url = reverse('admin:orchestrator_api_scan_change', args=[obj.scan.id])
+        return format_html('<a href="{}">{}</a>', url, obj.scan.id)
+    scan_id.short_description = 'Scan'
+    
+    def target_address(self, obj):
+        """Display target address"""
+        return obj.target.address
+    target_address.short_description = 'Target'
+    target_address.admin_order_field = 'target__address'
+    
+    def port_display(self, obj):
+        """Display port with protocol"""
+        return f"{obj.port}/{obj.protocol}"
+    port_display.short_description = 'Port'
+    port_display.admin_order_field = 'port'
+    
+    def get_queryset(self, request):
+        """Optimize queryset with select_related"""
+        return super().get_queryset(request).select_related('scan', 'target')
+    
 # Customize admin site
 admin.site.site_header = 'VaPtER Administration'
 admin.site.site_title = 'VaPtER Admin'

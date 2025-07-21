@@ -96,6 +96,90 @@ class Command(BaseCommand):
         finally:
             self._cleanup()
     
+    def handle_status_update(self, message):
+        """Handle status update message"""
+        try:
+            scan_id = message.get('scan_id')
+            module = message.get('module')
+            status = message.get('status')
+            
+            if not all([scan_id, module, status]):
+                self.stdout.write(self.style.ERROR('Invalid message format'))
+                return
+            
+            # Get scan object
+            try:
+                scan = Scan.objects.get(id=scan_id)
+            except Scan.DoesNotExist:
+                self.stdout.write(self.style.ERROR(f'Scan {scan_id} not found'))
+                return
+            
+            self.stdout.write(f"Processing {module} status update for scan {scan_id}: {status}")
+            
+            # Handle different modules
+            if module == 'nmap':
+                if status == 'completed':
+                    # Process nmap results
+                    results = message.get('results', {})
+                    if results:
+                        scan.parsed_nmap_results = results
+                        scan.status = 'Nmap Scan Completed'
+                        scan.save()
+                        
+                        # Check if scan details need to be created/updated
+                        self.update_scan_details(scan, results)
+                        
+                        # Trigger next phase
+                        ScanOrchestratorService.process_nmap_completion(scan)
+                        
+                elif status == 'error':
+                    scan.status = 'Failed'
+                    scan.error_message = message.get('error_details', 'Nmap scan failed')
+                    scan.completed_at = timezone.now()
+                    scan.save()
+                    
+                elif status == 'started':
+                    scan.status = 'Nmap Scan Running'
+                    scan.started_at = timezone.now()
+                    scan.save()
+            
+            elif module == 'fingerprint':
+                if status == 'completed':
+                    # Fingerprint results are saved directly by the plugin
+                    scan.status = 'Finger Scan Completed'
+                    scan.save()
+                    
+                    # Trigger next phase
+                    ScanOrchestratorService.process_fingerprint_completion(scan)
+                    
+                elif status == 'error':
+                    scan.status = 'Failed'
+                    scan.error_message = message.get('error_details', 'Fingerprint scan failed')
+                    scan.completed_at = timezone.now()
+                    scan.save()
+                    
+                elif status == 'started':
+                    scan.status = 'Finger Scan Running'
+                    scan.save()
+            
+            # Add handlers for other modules (enum, web, vuln_lookup) as they are implemented
+            elif module in ['enum', 'web', 'vuln_lookup']:
+                self.stdout.write(self.style.WARNING(f"Handler for {module} not yet implemented"))
+                # For now, just update status
+                if status == 'error':
+                    scan.status = 'Failed'
+                    scan.error_message = message.get('error_details', f'{module} scan failed')
+                    scan.completed_at = timezone.now()
+                    scan.save()
+            
+            else:
+                self.stdout.write(self.style.WARNING(f"Unknown module: {module}"))
+            
+            self.stdout.write(self.style.SUCCESS(f"Updated scan {scan_id} status"))
+            
+        except Exception as e:
+            self.stdout.write(self.style.ERROR(f"Error handling status update: {str(e)}"))
+            
     def _connect_rabbitmq(self):
         """Connect to RabbitMQ"""
         try:

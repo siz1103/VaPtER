@@ -398,3 +398,90 @@ class ScanDetailViewSet(viewsets.ModelViewSet):
         if scan_id:
             queryset = queryset.filter(scan_id=scan_id)
         return queryset
+    
+class FingerprintDetailViewSet(viewsets.ModelViewSet):
+    """ViewSet for FingerprintDetail CRUD operations"""
+    
+    queryset = FingerprintDetail.objects.select_related('scan', 'target').all()
+    serializer_class = FingerprintDetailSerializer
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['scan', 'target', 'port', 'protocol', 'service_name']
+    search_fields = ['service_name', 'service_version', 'service_product']
+    ordering_fields = ['port', 'service_name', 'confidence_score', 'created_at']
+    ordering = ['scan', 'port']
+    
+    @action(detail=False, methods=['post'])
+    def bulk_create(self, request):
+        """Bulk create fingerprint details"""
+        serializer = FingerprintDetailBulkCreateSerializer(data=request.data)
+        if serializer.is_valid():
+            result = serializer.save()
+            # Return created objects
+            response_serializer = FingerprintDetailSerializer(
+                result['fingerprint_details'], 
+                many=True
+            )
+            return Response(
+                response_serializer.data, 
+                status=status.HTTP_201_CREATED
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    @action(detail=False, methods=['get'])
+    def by_scan(self, request):
+        """Get fingerprint details for a specific scan"""
+        scan_id = request.query_params.get('scan_id')
+        if not scan_id:
+            return Response(
+                {'error': 'scan_id parameter is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        fingerprints = self.get_queryset().filter(scan_id=scan_id)
+        serializer = self.get_serializer(fingerprints, many=True)
+        return Response(serializer.data)
+    
+    @action(detail=False, methods=['get'])
+    def by_target(self, request):
+        """Get fingerprint details for a specific target"""
+        target_id = request.query_params.get('target_id')
+        if not target_id:
+            return Response(
+                {'error': 'target_id parameter is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        fingerprints = self.get_queryset().filter(target_id=target_id)
+        
+        # Optionally filter by latest scan only
+        latest_only = request.query_params.get('latest_only', 'false').lower() == 'true'
+        if latest_only:
+            # Get latest scan for this target
+            latest_scan = Scan.objects.filter(
+                target_id=target_id,
+                parsed_finger_results__isnull=False
+            ).order_by('-initiated_at').first()
+            
+            if latest_scan:
+                fingerprints = fingerprints.filter(scan=latest_scan)
+        
+        serializer = self.get_serializer(fingerprints, many=True)
+        return Response(serializer.data)
+    
+    @action(detail=False, methods=['get'])
+    def service_summary(self, request):
+        """Get summary of detected services"""
+        # Get unique services with counts
+        from django.db.models import Count
+        
+        services = self.get_queryset().values(
+            'service_name', 'service_version'
+        ).annotate(
+            count=Count('id')
+        ).order_by('-count')
+        
+        return Response({
+            'total_fingerprints': self.get_queryset().count(),
+            'unique_services': len(services),
+            'services': list(services)
+        })

@@ -2,7 +2,8 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
     CustomerViewSet, PortListViewSet, ScanTypeViewSet,
-    TargetViewSet, ScanViewSet, ScanDetailViewSet
+    TargetViewSet, ScanViewSet, ScanDetailViewSet,
+    FingerprintDetailViewSet
 )
 
 # Create router and register viewsets
@@ -13,6 +14,7 @@ router.register(r'scan-types', ScanTypeViewSet, basename='scantype')
 router.register(r'targets', TargetViewSet, basename='target')
 router.register(r'scans', ScanViewSet, basename='scan')
 router.register(r'scan-details', ScanDetailViewSet, basename='scandetail')
+router.register(r'fingerprint-details', FingerprintDetailViewSet)
 
 urlpatterns = [
     # API routes

@@ -141,21 +141,10 @@ class ScanOrchestratorService:
         try:
             scan_type = scan.scan_type
             
-            # TEMPORARY FIX: Skip plugin checks until plugins are implemented
-            # TODO: Re-enable plugin checks when plugins are ready
             logger.info(f"Nmap scan completed for scan {scan.id}")
             logger.info(f"Plugin status - Finger: {scan_type.plugin_finger}, Enum: {scan_type.plugin_enum}, "
                        f"Web: {scan_type.plugin_web}, Vuln: {scan_type.plugin_vuln_lookup}")
             
-            # For now, mark scan as completed since plugins are not implemented
-            scan.status = 'Completed'
-            scan.completed_at = timezone.now()
-            scan.save()
-            
-            logger.info(f"Scan {scan.id} marked as completed (plugins skipped - not implemented)")
-            
-            # TODO: Uncomment and use this code when plugins are implemented
-            """
             # Check which plugins should run next
             next_plugin = None
             
@@ -176,18 +165,55 @@ class ScanOrchestratorService:
                 scan.completed_at = timezone.now()
                 scan.save()
                 
-                # Start report generation if enabled
+                logger.info(f"Scan {scan.id} completed - no more plugins to run")
+                
+                # TODO: Start report generation if enabled
                 # ScanOrchestratorService._start_report_generation(scan)
                 
                 return True
-            """
-            
-            return True
                 
         except Exception as e:
             logger.error(f"Error processing nmap completion for scan {scan.id}: {str(e)}")
             return False
     
+    @staticmethod
+    def process_fingerprint_completion(scan):
+        """Process fingerprint scan completion and start next phase"""
+        try:
+            scan_type = scan.scan_type
+            
+            logger.info(f"Fingerprint scan completed for scan {scan.id}")
+            
+            # Update status
+            scan.status = 'Finger Scan Completed'
+            scan.save()
+            
+            # Check which plugin should run next
+            next_plugin = None
+            
+            if scan_type.plugin_enum and not scan.parsed_enum_results:
+                next_plugin = 'enum'
+            elif scan_type.plugin_web and not scan.parsed_web_results:
+                next_plugin = 'web'
+            elif scan_type.plugin_vuln_lookup and not scan.parsed_vuln_results:
+                next_plugin = 'vuln_lookup'
+            
+            if next_plugin:
+                return ScanOrchestratorService._start_plugin_scan(scan, next_plugin)
+            else:
+                # No more plugins, mark as completed
+                scan.status = 'Completed'
+                scan.completed_at = timezone.now()
+                scan.save()
+                
+                logger.info(f"Scan {scan.id} completed after fingerprinting")
+                
+                return True
+                
+        except Exception as e:
+            logger.error(f"Error processing fingerprint completion for scan {scan.id}: {str(e)}")
+            return False
+        
     @staticmethod
     def process_plugin_completion(scan, plugin_name):
         """Process plugin completion and start next phase"""
@@ -235,65 +261,42 @@ class ScanOrchestratorService:
     def _start_plugin_scan(scan, plugin_name):
         """Start a specific plugin scan"""
         try:
-           # TEMPORARY: Log warning since plugins not implemented
-            logger.warning(f"Attempted to start {plugin_name} plugin for scan {scan.id}, but plugin not implemented")
-            return False
-            
-            # TODO: Re-enable when plugins are implemented
-            """
-            # Map plugin names to queues and status
-            plugin_config = {
-                'fingerprint': {
-                    'queue': settings.RABBITMQ_FINGERPRINT_SCAN_REQUEST_QUEUE,
-                    'status': 'Finger Scan Running'
-                },
-                'enum': {
-                    'queue': settings.RABBITMQ_ENUM_SCAN_REQUEST_QUEUE,
-                    'status': 'Enum Scan Running'
-                },
-                'web': {
-                    'queue': settings.RABBITMQ_WEB_SCAN_REQUEST_QUEUE,
-                    'status': 'Web Scan Running'
-                },
-                'vuln_lookup': {
-                    'queue': settings.RABBITMQ_VULN_LOOKUP_REQUEST_QUEUE,
-                    'status': 'Vuln Lookup Running'
-                }
+            queue_mapping = {
+                'fingerprint': 'fingerprint_scan_requests',
+                'enum': 'enum_scan_requests',
+                'web': 'web_scan_requests',
+                'vuln_lookup': 'vuln_lookup_requests'
             }
             
-            if plugin_name not in plugin_config:
+            status_mapping = {
+                'fingerprint': 'Finger Scan Running',
+                'enum': 'Enum Scan Running',
+                'web': 'Web Scan Running',
+                'vuln_lookup': 'Vuln Lookup Running'
+            }
+            
+            queue_name = queue_mapping.get(plugin_name)
+            new_status = status_mapping.get(plugin_name)
+            
+            if not queue_name or not new_status:
                 logger.error(f"Unknown plugin: {plugin_name}")
                 return False
             
-            config = plugin_config[plugin_name]
-            
             # Update scan status
-            scan.status = config['status']
+            scan.status = new_status
             scan.save()
             
-            # Prepare message
+            # Prepare message for plugin
             message = {
                 'scan_id': scan.id,
+                'target_id': scan.target.id,
                 'target_host': scan.target.address,
-                'target_name': scan.target.name,
-                'nmap_results': scan.parsed_nmap_results,
+                'plugin': plugin_name,
                 'timestamp': timezone.now().isoformat()
             }
             
-            # Publish to plugin queue
-            rabbitmq_service = RabbitMQService()
-            success = rabbitmq_service.publish_message(config['queue'], message)
-            rabbitmq_service.close()
-            
-            if success:
-                logger.info(f"Started {plugin_name} scan for scan {scan.id}")
-            else:
-                scan.status = 'Failed'
-                scan.error_message = f'Failed to start {plugin_name} scan'
-                scan.save()
-            
-            return success
-            """
+            # Send to appropriate queue
+            return MessageQueueService.publish_message(queue_name, message)
             
         except Exception as e:
             logger.error(f"Error starting {plugin_name} scan for scan {scan.id}: {str(e)}")
