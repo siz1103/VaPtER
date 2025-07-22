@@ -1,10 +1,11 @@
+# plugins/gce_scanner/test_gce.py
+
 """Test script to verify GCE connection and basic operations"""
 
 import os
 import sys
 import logging
 from gvm.connections import UnixSocketConnection
-from gvm.protocols.gmp import Gmp
 from gvm.transforms import EtreeCheckCommandTransform
 from gvm.errors import GvmError
 
@@ -16,6 +17,26 @@ logger = logging.getLogger(__name__)
 GCE_SOCKET_PATH = os.environ.get('GCE_SOCKET_PATH', '/mnt/gce_sockets/gvmd.sock')
 GCE_USERNAME = os.environ.get('GCE_USERNAME', 'vapter_api')
 GCE_PASSWORD = os.environ.get('GCE_PASSWORD', 'vapter_gce_password')
+
+
+def get_gmp_connection():
+    """Get GMP connection with automatic version detection"""
+    connection = UnixSocketConnection(path=GCE_SOCKET_PATH)
+    transform = EtreeCheckCommandTransform()
+    
+    # Try different GMP protocol versions
+    try:
+        # Try GMP 22.4+
+        from gvm.protocols.gmpv224 import Gmp as Gmp224
+        gmp = Gmp224(connection, transform=transform)
+        logger.info("Using GMP v22.4+ protocol")
+        return gmp
+    except (ImportError, GvmError):
+        # Fallback to standard GMP
+        from gvm.protocols.gmp import Gmp
+        gmp = Gmp(connection, transform=transform)
+        logger.info("Using standard GMP protocol")
+        return gmp
 
 
 def test_gce_connection():
@@ -31,11 +52,8 @@ def test_gce_connection():
         
         logger.info(f"Socket file found at: {GCE_SOCKET_PATH}")
         
-        # Create connection
-        connection = UnixSocketConnection(path=GCE_SOCKET_PATH)
-        transform = EtreeCheckCommandTransform()
-        
-        with Gmp(connection, transform=transform) as gmp:
+        # Create connection with automatic version detection
+        with get_gmp_connection() as gmp:
             # Try to authenticate
             logger.info(f"Authenticating as '{GCE_USERNAME}'...")
             gmp.authenticate(GCE_USERNAME, GCE_PASSWORD)
@@ -43,7 +61,7 @@ def test_gce_connection():
             
             # Get GMP version
             version_response = gmp.get_version()
-            version = version_response.find('version').text
+            version = version_response.find('version').text if version_response is not None else "Unknown"
             logger.info(f"✓ GMP Version: {version}")
             
             # List scan configs
@@ -85,6 +103,8 @@ def test_gce_connection():
         
     except Exception as e:
         logger.error(f"Unexpected error: {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
 
@@ -93,10 +113,7 @@ def test_create_dummy_target():
     logger.info("\nTesting target creation...")
     
     try:
-        connection = UnixSocketConnection(path=GCE_SOCKET_PATH)
-        transform = EtreeCheckCommandTransform()
-        
-        with Gmp(connection, transform=transform) as gmp:
+        with get_gmp_connection() as gmp:
             gmp.authenticate(GCE_USERNAME, GCE_PASSWORD)
             
             # Create a test target

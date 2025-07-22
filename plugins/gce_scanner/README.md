@@ -4,6 +4,17 @@
 
 Il plugin GCE Scanner per VaPtER fornisce integrazione con Greenbone Community Edition per scansioni di vulnerabilità avanzate.
 
+## ⚠️ Nota Importante sulla Compatibilità
+
+Il plugin supporta automaticamente diverse versioni del protocollo GMP (Greenbone Management Protocol). Se riscontri errori di versione GMP non supportata, esegui:
+
+```bash
+chmod +x update-gce-scanner.sh
+./update-gce-scanner.sh
+```
+
+Questo aggiornerà il plugin per supportare GMP 22.x e versioni successive.
+
 ## Funzionalità
 
 - Creazione automatica di target in GCE basati sui risultati Nmap

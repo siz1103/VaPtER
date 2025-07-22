@@ -1,3 +1,5 @@
+# plugins/gce_scanner/gce_scanner.py
+
 import json
 import logging
 import time
@@ -13,6 +15,7 @@ from gvm.connections import UnixSocketConnection
 from gvm.protocols.gmp import Gmp
 from gvm.transforms import EtreeCheckCommandTransform
 from gvm.errors import GvmError
+from gvm.protocols.gmpv224 import Gmp as Gmp224  # Support for newer GMP versions
 import xmltodict
 
 import config as settings
@@ -60,11 +63,36 @@ class GCEScanner:
             return False
     
     def connect_gce(self):
-        """Connect to GCE via Unix socket"""
+        """Connect to GCE via Unix socket with automatic version detection"""
         try:
             connection = UnixSocketConnection(path=settings.GCE_SOCKET_PATH)
             transform = EtreeCheckCommandTransform()
-            return Gmp(connection, transform=transform)
+            
+            # First try with the latest GMP protocol
+            try:
+                # Try with GMP 22.4+ protocol
+                from gvm.protocols.gmpv224 import Gmp as Gmp224
+                gmp = Gmp224(connection, transform=transform)
+                
+                # Test connection by getting version
+                version_response = gmp.get_version()
+                version = version_response.find('version').text if version_response is not None else "Unknown"
+                logger.info(f"Connected to GCE with GMP version: {version}")
+                return gmp
+                
+            except (ImportError, GvmError) as e:
+                logger.warning(f"Failed with Gmp224, trying standard Gmp: {e}")
+                
+                # Fallback to standard Gmp
+                connection = UnixSocketConnection(path=settings.GCE_SOCKET_PATH)
+                gmp = Gmp(connection, transform=transform)
+                
+                # Test connection
+                version_response = gmp.get_version()
+                version = version_response.find('version').text if version_response is not None else "Unknown"
+                logger.info(f"Connected to GCE with GMP version: {version}")
+                return gmp
+                
         except FileNotFoundError:
             logger.error(f"GCE socket not found at {settings.GCE_SOCKET_PATH}")
             raise

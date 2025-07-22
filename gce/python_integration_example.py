@@ -10,7 +10,6 @@ import sys
 import time
 import datetime
 from gvm.connections import UnixSocketConnection
-from gvm.protocols.gmp import Gmp
 from gvm.transforms import EtreeCheckCommandTransform
 from gvm.errors import GvmError
 import xml.etree.ElementTree as ET
@@ -27,6 +26,21 @@ SCANNER_OPENVAS_DEFAULT = '08b69003-5fc2-4037-a479-93b440211c73'
 PORT_LIST_ALL_TCP_NMAP_UDP = '730ef368-57e2-11e1-a90f-406186ea4fc5'
 
 
+def get_gmp_connection(socket_path):
+    """Get GMP connection with automatic version detection"""
+    connection = UnixSocketConnection(path=socket_path)
+    transform = EtreeCheckCommandTransform()
+    
+    try:
+        # Try GMP 22.4+
+        from gvm.protocols.gmpv224 import Gmp as Gmp224
+        return Gmp224(connection, transform=transform)
+    except (ImportError, GvmError):
+        # Fallback to standard GMP
+        from gvm.protocols.gmp import Gmp
+        return Gmp(connection, transform=transform)
+
+
 class GCEIntegration:
     """Example class for GCE integration"""
     
@@ -40,9 +54,12 @@ class GCEIntegration:
         """Connect and authenticate to GCE"""
         try:
             print(f"Connecting to GCE at {self.socket_path}...")
-            connection = UnixSocketConnection(path=self.socket_path)
-            transform = EtreeCheckCommandTransform()
-            self.gmp = Gmp(connection, transform=transform)
+            self.gmp = get_gmp_connection(self.socket_path)
+            
+            # Get version info
+            version_response = self.gmp.get_version()
+            version = version_response.find('version').text if version_response is not None else "Unknown"
+            print(f"Connected to GMP version: {version}")
             
             print(f"Authenticating as {self.username}...")
             self.gmp.authenticate(self.username, self.password)
