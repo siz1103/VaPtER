@@ -6,7 +6,7 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('orchestrator_api', '0003_rename_fingerprint_scan_id_port_idx_fingerprint_scan_id_970192_idx_and_more'),
+        ('orchestrator_api', '0002_add_fingerprintdetail'),
     ]
 
     operations = [
