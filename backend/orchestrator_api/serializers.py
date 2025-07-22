@@ -2,8 +2,10 @@
 
 from rest_framework import serializers
 from django.core.exceptions import ValidationError as DjangoValidationError
-from .models import Customer, PortList, ScanType, Target, Scan, ScanDetail, FingerprintDetail
-
+from .models import (
+    Customer, PortList, ScanType, Target, Scan, ScanDetail, 
+    FingerprintDetail, GceResult
+)
 
 class CustomerSerializer(serializers.ModelSerializer):
     """Serializer for Customer model"""
@@ -412,3 +414,30 @@ class FingerprintDetailBulkCreateSerializer(serializers.Serializer):
         created_objects = FingerprintDetail.objects.bulk_create(fingerprint_objects)
         
         return {'fingerprint_details': created_objects}
+    
+class GceResultSerializer(serializers.ModelSerializer):
+    """Serializer for GceResult model"""
+    
+    class Meta:
+        model = GceResult
+        fields = '__all__'
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class GceProgressSerializer(serializers.Serializer):
+    """Serializer for GCE scan progress updates"""
+    gce_task_id = serializers.UUIDField()
+    gce_scan_progress = serializers.IntegerField(min_value=0, max_value=100)
+    gce_scan_status = serializers.CharField(max_length=50)
+
+
+class GceResultCreateSerializer(serializers.Serializer):
+    """Serializer for creating GCE results"""
+    gce_task_id = serializers.UUIDField()
+    gce_report_id = serializers.UUIDField()
+    gce_target_id = serializers.UUIDField()
+    report_format = serializers.ChoiceField(choices=['XML', 'JSON'])
+    full_report = serializers.CharField()
+    gce_scan_started_at = serializers.DateTimeField()
+    gce_scan_completed_at = serializers.DateTimeField()
+    vulnerability_count = serializers.JSONField(required=False)

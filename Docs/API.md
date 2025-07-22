@@ -106,6 +106,79 @@ Ottenere dettagli aggiuntivi delle scansioni.
 }
 ```
 
+GCE Results
+List GCE Results
+httpGET /api/orchestrator/gce-results/
+Query parameters:
+
+scan - Filter by scan ID
+target - Filter by target ID
+gce_scan_status - Filter by status (Done, Running, Stopped)
+report_format - Filter by format (XML, JSON)
+
+Response:
+json{
+  "count": 10,
+  "results": [
+    {
+      "id": 1,
+      "scan": 123,
+      "target": 456,
+      "gce_task_id": "550e8400-e29b-41d4-a716-446655440000",
+      "gce_report_id": "660e8400-e29b-41d4-a716-446655440000",
+      "gce_target_id": "770e8400-e29b-41d4-a716-446655440000",
+      "gce_scan_status": "Done",
+      "gce_scan_progress": 100,
+      "report_format": "XML",
+      "vulnerability_count": {
+        "critical": 2,
+        "high": 5,
+        "medium": 10,
+        "low": 15,
+        "log": 20
+      },
+      "gce_scan_started_at": "2025-01-22T10:00:00Z",
+      "gce_scan_completed_at": "2025-01-22T11:30:00Z",
+      "created_at": "2025-01-22T10:00:00Z"
+    }
+  ]
+}
+Get GCE Result Detail
+httpGET /api/orchestrator/gce-results/{id}/
+Response includes the full report in full_report field.
+Update GCE Scan Progress
+httpPATCH /api/orchestrator/scans/{scan_id}/gce-progress/
+Request body:
+json{
+  "gce_task_id": "550e8400-e29b-41d4-a716-446655440000",
+  "gce_scan_progress": 45,
+  "gce_scan_status": "Running"
+}
+Response:
+json{
+  "status": "progress updated"
+}
+Create GCE Results
+httpPOST /api/orchestrator/scans/{scan_id}/gce-results/
+Request body:
+json{
+  "gce_task_id": "550e8400-e29b-41d4-a716-446655440000",
+  "gce_report_id": "660e8400-e29b-41d4-a716-446655440000",
+  "gce_target_id": "770e8400-e29b-41d4-a716-446655440000",
+  "report_format": "XML",
+  "full_report": "<xml>...</xml>",
+  "gce_scan_started_at": "2025-01-22T10:00:00Z",
+  "gce_scan_completed_at": "2025-01-22T11:30:00Z",
+  "vulnerability_count": {
+    "critical": 2,
+    "high": 5,
+    "medium": 10,
+    "low": 15,
+    "log": 20
+  }
+}
+Response: Returns the created/updated GceResult object.
+
 ## Processing automatico dei risultati Nmap
 
 ### Formato open_ports

@@ -184,14 +184,47 @@ services:
     cap_add:
     - NET_RAW
     - NET_ADMIN # Spesso necessario per operazioni di rete più ampie, includilo per sicurezza.
-    
+
+# GCE Scanner Module
+  gce_scanner:
+    build:
+      context: ./plugins/gce_scanner
+      dockerfile: Dockerfile
+    container_name: vapter_gce_scanner
+    environment:
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-vapter}:${RABBITMQ_PASSWORD:-vapter123}@rabbitmq:5672/
+      - INTERNAL_API_GATEWAY_URL=http://api_gateway:8080
+      - RABBITMQ_GCE_SCAN_REQUEST_QUEUE=${RABBITMQ_GCE_SCAN_REQUEST_QUEUE:-gce_scan_requests}
+      - RABBITMQ_SCAN_STATUS_UPDATE_QUEUE=${RABBITMQ_SCAN_STATUS_UPDATE_QUEUE:-scan_status_updates}
+      - GCE_USERNAME=${GCE_USERNAME:-vapter_api}
+      - GCE_PASSWORD=${GCE_PASSWORD:-vapter_gce_password}
+      - GCE_SOCKET_PATH=${GCE_SOCKET_PATH:-/mnt/gce_sockets/gvmd.sock}
+      - GCE_SCAN_CONFIG_ID=${GCE_SCAN_CONFIG_ID:-daba56c8-73ec-11df-a475-002264764cea}
+      - GCE_SCANNER_ID=${GCE_SCANNER_ID:-08b69003-5fc2-4037-a479-93b440211c73}
+      - GCE_PORT_LIST_ID=${GCE_PORT_LIST_ID:-730ef368-57e2-11e1-a90f-406186ea4fc5}
+      - GCE_POLLING_INTERVAL=${GCE_POLLING_INTERVAL:-60}
+      - GCE_MAX_SCAN_TIME=${GCE_MAX_SCAN_TIME:-14400}
+      - GCE_REPORT_FORMAT=${GCE_REPORT_FORMAT:-XML}
+    volumes:
+      # Mount GCE socket directory
+      - gvmd_socket_vol:/mnt/gce_sockets:ro
+    depends_on:
+      - rabbitmq
+      - api_gateway
+    networks:
+      - vapter_network
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   rabbitmq_data:
   backend_media:
   nmap_temp_results:
   fingerprint_results:
-  
+  gvmd_socket_vol:
+    external: true
+    
 networks:
   vapter_network:
     driver: bridge

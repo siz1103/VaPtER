@@ -213,49 +213,64 @@ class ScanOrchestratorService:
         except Exception as e:
             logger.error(f"Error processing fingerprint completion for scan {scan.id}: {str(e)}")
             return False
-        
+    
     @staticmethod
-    def process_plugin_completion(scan, plugin_name):
-        """Process plugin completion and start next phase"""
+    def process_gce_completion(scan):
+        """Process GCE scan completion and start next phase"""
         try:
             scan_type = scan.scan_type
             
-            # TEMPORARY: Skip until plugins are implemented
-            logger.warning(f"Plugin completion called for {plugin_name} but plugins not implemented yet")
-            scan.status = 'Completed'
-            scan.completed_at = timezone.now()
-            scan.save()
-            return True
+            logger.info(f"GCE scan completed for scan {scan.id}")
             
-            # TODO: Re-enable when plugins are implemented
-            """
-            # Determine next plugin based on current one
+            # Update status
+            scan.status = 'Gce Scan Completed'
+            scan.save()
+            
+            # Check which plugin should run next
             next_plugin = None
             
-            if plugin_name == 'fingerprint' and scan_type.plugin_gce and not scan.parsed_gce_results:
-                next_plugin = 'gce'
-            elif plugin_name in ['fingerprint', 'gce'] and scan_type.plugin_web and not scan.parsed_web_results:
+            if scan_type.plugin_web and not scan.parsed_web_results:
                 next_plugin = 'web'
-            elif plugin_name in ['fingerprint', 'gce', 'web'] and scan_type.plugin_vuln_lookup and not scan.parsed_vuln_results:
+            elif scan_type.plugin_vuln_lookup and not scan.parsed_vuln_results:
                 next_plugin = 'vuln_lookup'
             
             if next_plugin:
                 return ScanOrchestratorService._start_plugin_scan(scan, next_plugin)
             else:
-                # All plugins completed
+                # No more plugins, mark as completed
                 scan.status = 'Completed'
                 scan.completed_at = timezone.now()
                 scan.save()
                 
-                # Start report generation
+                logger.info(f"Scan {scan.id} completed - no more plugins to run")
+                
+                # TODO: Start report generation if enabled
                 # ScanOrchestratorService._start_report_generation(scan)
                 
                 return True
-            """
                 
         except Exception as e:
-            logger.error(f"Error processing {plugin_name} completion for scan {scan.id}: {str(e)}")
+            logger.error(f"Error processing GCE completion for scan {scan.id}: {str(e)}")
             return False
+    
+    @staticmethod
+    def process_plugin_completion(scan, plugin_name):
+        """Process plugin completion based on plugin name"""
+        plugin_handlers = {
+            'nmap': ScanOrchestratorService.process_nmap_completion,
+            'fingerprint': ScanOrchestratorService.process_fingerprint_completion,
+            'gce': ScanOrchestratorService.process_gce_completion,
+            # Add other plugin handlers here as they are implemented
+        }
+        
+        handler = plugin_handlers.get(plugin_name)
+        if handler:
+            return handler(scan)
+        else:
+            logger.warning(f"No handler found for plugin: {plugin_name}")
+            return False
+        
+    
     
     @staticmethod
     def _start_plugin_scan(scan, plugin_name):

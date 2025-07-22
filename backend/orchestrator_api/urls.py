@@ -3,7 +3,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     CustomerViewSet, PortListViewSet, ScanTypeViewSet,
     TargetViewSet, ScanViewSet, ScanDetailViewSet,
-    FingerprintDetailViewSet
+    FingerprintDetailViewSet, GceResultViewSet
 )
 
 # Create router and register viewsets
@@ -15,6 +15,7 @@ router.register(r'targets', TargetViewSet, basename='target')
 router.register(r'scans', ScanViewSet, basename='scan')
 router.register(r'scan-details', ScanDetailViewSet, basename='scandetail')
 router.register(r'fingerprint-details', FingerprintDetailViewSet)
+router.register(r'gce-results', GceResultViewSet)
 
 urlpatterns = [
     # API routes
