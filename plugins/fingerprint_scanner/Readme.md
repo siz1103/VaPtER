@@ -6,12 +6,54 @@ Il plugin Fingerprint Scanner per VaPtER fornisce capacità avanzate di identifi
 
 ## Funzionalità
 
-- Identificazione automatica dei servizi su porte aperte
-- Rilevamento versioni software
-- Integrazione con i risultati di nmap
-- Supporto per scansioni parallele
-- Confidence scoring per ogni risultato
-- Salvataggio dettagliato nel database
+1. Estrazione corretta dell'host
+
+Ora estrae correttamente l'IP dall'array addresses
+Preferisce l'hostname quando disponibile (come hai richiesto)
+Log più dettagliati per il debugging
+
+2. Mapping corretto dei campi del database
+
+port: intero (es. 22)
+protocol: transport protocol (tcp/udp)
+service_name: application protocol (ssh, http, smtp, etc.)
+service_product: software name (OpenSSH, Exim, nginx, etc.)
+service_version: versione (9.6p1, 4.92, etc.)
+service_info: informazioni aggiuntive estratte dal banner
+
+3. Parser del banner migliorato
+La funzione parse_banner ora gestisce correttamente:
+
+SSH: estrae OpenSSH e versione 9.6p1 da "SSH-2.0-OpenSSH_9.6p1 Ubuntu-3ubuntu13.12"
+SMTP: estrae Exim e 4.92 da "220 hostname ESMTP Exim 4.92"
+HTTP: estrae prodotto e versione dal formato "nginx/1.18.0"
+Altri protocolli: parsing generico per pattern comuni
+
+4. Gestione metadata migliorata
+
+I metadata vengono salvati in modo strutturato in additional_info
+Campi speciali come ssh_algorithms e password_auth_enabled vengono estratti
+Il banner originale viene preservato
+
+5. Logging e debugging
+
+Rispetta la variabile d'ambiente LOG_LEVEL
+Log dettagliati del JSON raw di FingerprintX per debugging
+Log informativi del processo di parsing
+
+6. Gestione dei risultati
+
+Salva anche risultati "no_match" se contengono dati utili
+Confidence score adattivo (95% per success, 50% per no_match)
+Summary migliorato per il report finale
+
+Il plugin ora dovrebbe:
+
+Estrarre correttamente gli host dai risultati nmap
+Eseguire FingerprintX su ogni porta aperta
+Parsare intelligentemente i banner per estrarre product e version
+Salvare i dati nel formato corretto nel database
+Fornire log dettagliati per il debugging
 
 ## Requisiti
 
