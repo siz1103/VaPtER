@@ -80,7 +80,7 @@ services:
     container_name: gce_redis
     restart: on-failure
     volumes:
-      - redis_socket_vol:/run/redis/
+      - gce_redis_socket_vol:/run/redis/
     networks:
       - gce_network
 
@@ -93,8 +93,8 @@ services:
       POSTGRES_USER: ${GCE_POSTGRES_USER:-gce}
       POSTGRES_PASSWORD: ${GCE_POSTGRES_PASSWORD:-gce_password_123}
     volumes:
-      - psql_data_vol:/var/lib/postgresql
-      - psql_socket_vol:/var/run/postgresql
+      - gce_psql_data_vol:/var/lib/postgresql
+      - gce_psql_socket_vol:/var/run/postgresql
     networks:
       - gce_network
 
