@@ -75,7 +75,7 @@ services:
       - gce_mqtt_broker_conf_vol:/etc/mosquitto
 
   gce-notus-scanner:
-    image: registry.community.greenbone.net/community/notus-data:stable
+    image: registry.community.greenbone.net/community/notus-data:latest
     container_name: gce_notus_scanner
     restart: unless-stopped
     environment:
