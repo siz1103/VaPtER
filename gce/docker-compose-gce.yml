@@ -189,27 +189,27 @@ services:
     networks:
       - gce_network
 
-  # Python API wrapper per semplificare l'integrazione con Vapter
-  gce-api:
-    image: registry.community.greenbone.net/community/python-gvm:stable
-    container_name: gce_api
-    restart: unless-stopped
-    environment:
-      GVM_HOST: gce-gvmd
-      GVM_PORT: 9390
-      GVM_USERNAME: ${GCE_ADMIN_USER:-admin}
-      GVM_PASSWORD: ${GCE_ADMIN_PASSWORD:-admin_password_123}
-    ports:
-      # API Python GVM
-      - "${GCE_API_PORT:-9390}:9390"
-    volumes:
-      - gce_gvmd_socket_vol:/run/gvmd
-    depends_on:
-      - gce-gvmd
-    networks:
-      - gce_network
-    command: >
-      sh -c "echo 'GCE API ready. Use Python GVM library to connect.' && tail -f /dev/null"
+#  # Python API wrapper per semplificare l'integrazione con Vapter
+#  gce-api:
+#    image: registry.community.greenbone.net/community/python-gvm:stable
+#    container_name: gce_api
+#    restart: unless-stopped
+#    environment:
+#      GVM_HOST: gce-gvmd
+#      GVM_PORT: 9390
+#      GVM_USERNAME: ${GCE_ADMIN_USER:-admin}
+#      GVM_PASSWORD: ${GCE_ADMIN_PASSWORD:-admin_password_123}
+#    ports:
+#      # API Python GVM
+#      - "${GCE_API_PORT:-9390}:9390"
+#    volumes:
+#      - gce_gvmd_socket_vol:/run/gvmd
+#    depends_on:
+#      - gce-gvmd
+#    networks:
+#      - gce_network
+#    command: >
+#      sh -c "echo 'GCE API ready. Use Python GVM library to connect.' && tail -f /dev/null"
 
 volumes:
   gce_postgres_data:
