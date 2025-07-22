@@ -38,7 +38,7 @@ services:
       retries: 5
 
   gce-gpg-data:
-    image: greenbone/gpg-data:stable
+    image: registry.community.greenbone.net/community/gpg-data:stable
     container_name: gce_gpg_data
     volumes:
       - gce_gpg_data_vol:/mnt
@@ -46,7 +46,7 @@ services:
       - gce_network
 
   gce-notus-data:
-    image: greenbone/notus-data:stable
+    image: registry.community.greenbone.net/community/notus-data:stable
     container_name: gce_notus_data
     volumes:
       - gce_notus_data_vol:/mnt
@@ -54,7 +54,7 @@ services:
       - gce_network
 
   gce-vulnerability-tests:
-    image: greenbone/vulnerability-tests:stable
+    image: registry.community.greenbone.net/community/vulnerability-tests:stable
     container_name: gce_vulnerability_tests
     environment:
       STORAGE_PATH: /var/lib/openvas/22.04/vt-data/nasl
@@ -64,7 +64,7 @@ services:
       - gce_network
 
   gce-mqtt-broker:
-    image: greenbone/mqtt-broker:stable
+    image: registry.community.greenbone.net/community/mqtt-broker:stable
     container_name: gce_mqtt_broker
     restart: unless-stopped
     ports:
@@ -75,7 +75,7 @@ services:
       - gce_mqtt_broker_conf_vol:/etc/mosquitto
 
   gce-notus-scanner:
-    image: greenbone/notus-scanner:stable
+    image: registry.community.greenbone.net/community/notus-scanner:stable
     container_name: gce_notus_scanner
     restart: unless-stopped
     environment:
@@ -92,7 +92,7 @@ services:
       - gce_network
 
   gce-gvmd:
-    image: greenbone/gvmd:stable
+    image: registry.community.greenbone.net/community/gvmd:stable
     container_name: gce_gvmd
     restart: unless-stopped
     environment:
@@ -122,7 +122,7 @@ services:
       - gce_network
 
   gce-openvas:
-    image: greenbone/openvas-scanner:stable
+    image: registry.community.greenbone.net/community/openvas-scanner:stable
     container_name: gce_openvas
     restart: unless-stopped
     environment:
@@ -149,7 +149,7 @@ services:
       - gce_network
 
   gce-ospd-openvas:
-    image: greenbone/ospd-openvas:stable
+    image: registry.community.greenbone.net/community/ospd-openvas:stable
     container_name: gce_ospd_openvas
     restart: unless-stopped
     environment:
@@ -171,7 +171,7 @@ services:
       - gce_network
 
   gce-gsa:
-    image: greenbone/gsa:stable
+    image: registry.community.greenbone.net/community/gsa:stable
     container_name: gce_gsa
     restart: unless-stopped
     environment:
@@ -191,7 +191,7 @@ services:
 
   # Python API wrapper per semplificare l'integrazione con Vapter
   gce-api:
-    image: greenbone/python-gvm:stable
+    image: registry.community.greenbone.net/community/python-gvm:stable
     container_name: gce_api
     restart: unless-stopped
     environment:
