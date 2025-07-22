@@ -42,7 +42,7 @@ export default function ScanTypeForm({ scanType, onSuccess, onCancel }: ScanType
     be_quiet: scanType?.be_quiet || false,
     port_list: scanType?.port_list || undefined,
     plugin_finger: scanType?.plugin_finger || false,
-    plugin_enum: scanType?.plugin_enum || false,
+    plugin_gce: scanType?.plugin_gce || false,
     plugin_web: scanType?.plugin_web || false,
     plugin_vuln_lookup: scanType?.plugin_vuln_lookup || false,
     description: scanType?.description || '',
@@ -61,7 +61,7 @@ export default function ScanTypeForm({ scanType, onSuccess, onCancel }: ScanType
         ...prev,
         port_list: undefined,
         plugin_finger: false,
-        plugin_enum: false,
+        plugin_gce: false,
         plugin_web: false,
         plugin_vuln_lookup: false,
       }))
@@ -77,7 +77,7 @@ export default function ScanTypeForm({ scanType, onSuccess, onCancel }: ScanType
       if (cleanData.only_discovery) {
         cleanData.port_list = undefined
         cleanData.plugin_finger = false
-        cleanData.plugin_enum = false
+        cleanData.plugin_gce = false
         cleanData.plugin_web = false
         cleanData.plugin_vuln_lookup = false
       }
@@ -262,13 +262,13 @@ export default function ScanTypeForm({ scanType, onSuccess, onCancel }: ScanType
               
               <div className="flex items-center space-x-2">
                 <Switch
-                  id="plugin_enum"
-                  checked={formData.plugin_enum}
-                  onCheckedChange={handleChange('plugin_enum')}
+                  id="plugin_gce"
+                  checked={formData.plugin_gce}
+                  onCheckedChange={handleChange('plugin_gce')}
                   disabled={formData.only_discovery}
                 />
-                <Label htmlFor="plugin_enum" className="text-sm">
-                  Enumeration
+                <Label htmlFor="plugin_gce" className="text-sm">
+                  G
                 </Label>
               </div>
               

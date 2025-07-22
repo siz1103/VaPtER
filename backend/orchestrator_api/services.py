@@ -36,7 +36,7 @@ class RabbitMQService:
         """Declare all required queues"""
         queues = [
             settings.RABBITMQ_NMAP_SCAN_REQUEST_QUEUE,
-            settings.RABBITMQ_ENUM_SCAN_REQUEST_QUEUE,
+            settings.RABBITMQ_GCE_SCAN_REQUEST_QUEUE,
             settings.RABBITMQ_FINGERPRINT_SCAN_REQUEST_QUEUE,
             settings.RABBITMQ_WEB_SCAN_REQUEST_QUEUE,
             settings.RABBITMQ_VULN_LOOKUP_REQUEST_QUEUE,
@@ -142,7 +142,7 @@ class ScanOrchestratorService:
             scan_type = scan.scan_type
             
             logger.info(f"Nmap scan completed for scan {scan.id}")
-            logger.info(f"Plugin status - Finger: {scan_type.plugin_finger}, Enum: {scan_type.plugin_enum}, "
+            logger.info(f"Plugin status - Finger: {scan_type.plugin_finger}, Gce: {scan_type.plugin_gce}, "
                        f"Web: {scan_type.plugin_web}, Vuln: {scan_type.plugin_vuln_lookup}")
             
             # Check which plugins should run next
@@ -150,8 +150,8 @@ class ScanOrchestratorService:
             
             if scan_type.plugin_finger and not scan.parsed_finger_results:
                 next_plugin = 'fingerprint'
-            elif scan_type.plugin_enum and not scan.parsed_enum_results:
-                next_plugin = 'enum'
+            elif scan_type.plugin_gce and not scan.parsed_gce_results:
+                next_plugin = 'gce'
             elif scan_type.plugin_web and not scan.parsed_web_results:
                 next_plugin = 'web'
             elif scan_type.plugin_vuln_lookup and not scan.parsed_vuln_results:
@@ -191,8 +191,8 @@ class ScanOrchestratorService:
             # Check which plugin should run next
             next_plugin = None
             
-            if scan_type.plugin_enum and not scan.parsed_enum_results:
-                next_plugin = 'enum'
+            if scan_type.plugin_gce and not scan.parsed_gce_results:
+                next_plugin = 'gce'
             elif scan_type.plugin_web and not scan.parsed_web_results:
                 next_plugin = 'web'
             elif scan_type.plugin_vuln_lookup and not scan.parsed_vuln_results:
@@ -232,11 +232,11 @@ class ScanOrchestratorService:
             # Determine next plugin based on current one
             next_plugin = None
             
-            if plugin_name == 'fingerprint' and scan_type.plugin_enum and not scan.parsed_enum_results:
-                next_plugin = 'enum'
-            elif plugin_name in ['fingerprint', 'enum'] and scan_type.plugin_web and not scan.parsed_web_results:
+            if plugin_name == 'fingerprint' and scan_type.plugin_gce and not scan.parsed_gce_results:
+                next_plugin = 'gce'
+            elif plugin_name in ['fingerprint', 'gce'] and scan_type.plugin_web and not scan.parsed_web_results:
                 next_plugin = 'web'
-            elif plugin_name in ['fingerprint', 'enum', 'web'] and scan_type.plugin_vuln_lookup and not scan.parsed_vuln_results:
+            elif plugin_name in ['fingerprint', 'gce', 'web'] and scan_type.plugin_vuln_lookup and not scan.parsed_vuln_results:
                 next_plugin = 'vuln_lookup'
             
             if next_plugin:
@@ -263,14 +263,14 @@ class ScanOrchestratorService:
         try:
             queue_mapping = {
                 'fingerprint': 'fingerprint_scan_requests',
-                'enum': 'enum_scan_requests',
+                'gce': 'gce_scan_requests',
                 'web': 'web_scan_requests',
                 'vuln_lookup': 'vuln_lookup_requests'
             }
             
             status_mapping = {
                 'fingerprint': 'Finger Scan Running',
-                'enum': 'Enum Scan Running',
+                'gce': 'Gce Scan Running',
                 'web': 'Web Scan Running',
                 'vuln_lookup': 'Vuln Lookup Running'
             }
@@ -397,24 +397,24 @@ class ScanStatusService:
                     scan.error_message = error_details or message or 'Fingerprint scan failed'
                     scan.completed_at = timezone.now()
 
-            elif module == 'enum':
+            elif module == 'gce':
                 if status == 'running':
-                    scan.status = 'Enum Scan Running'
+                    scan.status = 'Gce Scan Running'
                     if scan_detail:
-                        scan_detail.enum_started_at = timezone.now()
+                        scan_detail.gce_started_at = timezone.now()
                         scan_detail.save()
                 elif status == 'completed':
-                    scan.status = 'Enum Scan Completed'
+                    scan.status = 'Gce Scan Completed'
                     if scan_detail:
-                        scan_detail.enum_completed_at = timezone.now()
+                        scan_detail.gce_completed_at = timezone.now()
                         scan_detail.save()
                     
                     # Process plugin completion
-                    ScanOrchestratorService.process_plugin_completion(scan, 'enum')
+                    ScanOrchestratorService.process_plugin_completion(scan, 'gce')
                     
                 elif status == 'failed':
                     scan.status = 'Failed'
-                    scan.error_message = error_details or message or 'Enumeration scan failed'
+                    scan.error_message = error_details or message or 'Gce scan failed'
                     scan.completed_at = timezone.now()
 
             elif module == 'web':

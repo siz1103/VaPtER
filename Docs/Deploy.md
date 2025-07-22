@@ -31,7 +31,7 @@ L'obiettivo è avere una base dati e un'interfaccia utente minima per gestire i 
         * be_quiet (BooleanField default false)
         * port_list ForeignKey(Port_List, on_delete=models.SET_NULL, null=True, blank=True)
         * plugin_finger (BooleanField default false)
-        * plugin_enum (BooleanField default false)
+        * plugin_gce (BooleanField default false)
         * plugin_web (BooleanField default false)
         * plugin_vuln_lookup (BooleanField default false)
         * description (TextField null)
@@ -52,8 +52,8 @@ L'obiettivo è avere una base dati e un'interfaccia utente minima per gestire i 
             ('Nmap Scan Completed', 'Nmap Scan Completed'),
             ('Finger Scan Running', 'Finger Scan Running'),
             ('Finger Scan Completed', 'Finger Scan Completed'),
-            ('Enum Scan Running', 'Enum Scan Running'),
-            ('Enum Scan Completed', 'Enum Scan Completed'),
+            ('Gce Scan Running', 'Gce Scan Running'),
+            ('Gce Scan Completed', 'Gce Scan Completed'),
             ('Web Scan Running', 'Web Scan Running'),
             ('Web Scan Completed', 'Web Scan Completed'),
             ('Vuln Lookup Running', 'Vuln Lookup Running'),

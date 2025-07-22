@@ -317,7 +317,7 @@ curl "http://vapter.szini.it:8080/api/orchestrator/port-lists/?search=common"
 curl "http://vapter.szini.it:8080/api/orchestrator/scan-types/?search=Discovery"
 
 # Test filtri plugin
-curl "http://vapter.szini.it:8080/api/orchestrator/scan-types/?with_finger=true&with_enum=true"
+curl "http://vapter.szini.it:8080/api/orchestrator/scan-types/?with_finger=true&with_gce=true"
 
 # Test combinazioni
 curl "http://vapter.szini.it:8080/api/orchestrator/scan-types/?search=Complete&with_vuln=true"

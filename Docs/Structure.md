@@ -131,7 +131,7 @@ vapter/
 │   │   ├── Dockerfile               # Docker configuration (Kali Linux based)
 │   │   └── requirements.txt         # Python dependencies
 │   ├── fingerprint_scanner/          # ❌ DA IMPLEMENTARE - Fingerprinting module
-│   ├── enum_scanner/                 # ❌ DA IMPLEMENTARE - Enumeration module
+│   ├── gce_scanner/                 # ❌ DA IMPLEMENTARE - Gce module
 │   ├── web_scanner/                  # ❌ DA IMPLEMENTARE - Web scanning module
 │   ├── vuln_lookup/                  # ❌ DA IMPLEMENTARE - Vulnerability lookup module
 │   └── report_generator/             # ❌ DA IMPLEMENTARE - Report generation module
@@ -145,6 +145,16 @@ vapter/
 │   ├── Test.md                       # ✅ DA AGGIORNARE - Test da eseguire per testare i vari componenti
 │   ├── Utils.md                      # ✅ DA AGGIORNARE - Comandi utili per sviluppo e l'avvio del sistema
 │   └── Workflow.md                   # Spiegazione workflow scansione
+├── gce/                                # Directory per Greenbone Community Edition
+│   ├── docker-compose-gce.yml          # Docker compose per GCE (basato su versione ufficiale)
+│   ├── .env.gce.example                # Esempio variabili d'ambiente
+│   ├── .env.gce                        # Variabili d'ambiente (da creare copiando .example)
+│   ├── README.md                       # Documentazione dettagliata GCE
+│   ├── start-gce.sh                    # Script di avvio facilitato
+│   ├── python_integration_example.py   # Esempio integrazione Python con GCE
+│   ├── structure.txt                   # Questo file
+│   └── scripts/                        # Directory per script ausiliari
+│       └── setup-admin.sh              # Script per configurazione admin user
 ├── docker-compose.yml                # ✅ AGGIORNATO - Docker Compose configuration
 ├── .env.example                      # ✅ AGGIORNATO - File esempio delle env utilizzate
 └── .gitignore                        # file gitignore
@@ -214,7 +224,7 @@ vapter/
   - ✅ Polling per aggiornamenti scansioni (IMPLEMENTATO)
 
 ### ❌ DA IMPLEMENTARE (Fasi Future)
-- **Altri Scanner Modules**: Fingerprint, Enum, Web, Vuln Lookup, Report Generator
+- **Altri Scanner Modules**: Fingerprint, Gce, Web, Vuln Lookup, Report Generator
 - **Report Generation e Download**: Sistema di generazione e download report
 - **Advanced Results Visualization**: Grafici e visualizzazioni avanzate per risultati
 - **Authentication**: Sistema di autenticazione utente
@@ -248,7 +258,7 @@ vapter/
 #### Visualizzazione Risultati
 - Visualizzazione JSON formattata per tutti i risultati
 - Expand/collapse per dettagli completi
-- Supporto per tutti i tipi di risultati (nmap, finger, enum, web, vuln)
+- Supporto per tutti i tipi di risultati (nmap, finger, gce, web, vuln)
 - Timestamps e durata scansioni
 
 ### Dipendenze Aggiunte

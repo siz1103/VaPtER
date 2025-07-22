@@ -157,7 +157,7 @@ RABBITMQ_URL = config('RABBITMQ_URL', default='amqp://vapter:vapter123@localhost
 
 # Queue names
 RABBITMQ_NMAP_SCAN_REQUEST_QUEUE = 'nmap_scan_requests'
-RABBITMQ_ENUM_SCAN_REQUEST_QUEUE = 'enum_scan_requests'
+RABBITMQ_GCE_SCAN_REQUEST_QUEUE = 'gce_scan_requests'
 RABBITMQ_FINGERPRINT_SCAN_REQUEST_QUEUE = 'fingerprint_scan_requests'
 RABBITMQ_WEB_SCAN_REQUEST_QUEUE = 'web_scan_requests'
 RABBITMQ_VULN_LOOKUP_REQUEST_QUEUE = 'vuln_lookup_requests'

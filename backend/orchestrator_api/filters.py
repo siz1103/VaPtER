@@ -80,7 +80,7 @@ class ScanFilter(django_filters.FilterSet):
         """Filter running scans"""
         running_statuses = [
             'Queued', 'Nmap Scan Running', 'Finger Scan Running',
-            'Enum Scan Running', 'Web Scan Running', 'Vuln Lookup Running',
+            'Gce Scan Running', 'Web Scan Running', 'Vuln Lookup Running',
             'Report Generation Running'
         ]
         if value:

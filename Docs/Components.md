@@ -24,7 +24,6 @@ La piattaforma sarà composta da un insieme di microservizi containerizzati, orc
 
 * Nmap (per scansione di rete e identificazione servizi) 
 * fingerprint e mappatura versioni non rilevate da nmap
-* Enumerazione dei servizi 
 * Scanner web
 * Integrazione Greenbone Community Edition
 * Vulnerability Lookup Module (per correlazione con database di vulnerabilità)
@@ -69,11 +68,11 @@ La piattaforma sarà composta da un insieme di microservizi containerizzati, orc
     *   Linguaggio/Framework: go per compilazione/python
     *   Utilità chiave: Strumenti di fingerprint, FingerprintX https://github.com/praetorian-inc/fingerprintx.git (es. `dnsenum`, `enum4linux`, script personalizzati), `python3-requests`, `python3-pika`
     *   Comunicazione: Consuma da `RABBITMQ_FINGERPRINT_SCAN_REQUEST_QUEUE`, pubblica su `RABBITMQ_SCAN_STATUS_UPDATE_QUEUE`, interagisce con API Gateway.
-*   **Modulo Scanner Enum (plugins/enum_scanner):** (Da definire in dettaglio)
+*   **Modulo Scanner Gce (plugins/gce_scanner):** (Da definire in dettaglio)
     *   Immagine Base: `kalilinux/kali-rolling` (proposto)
     *   Linguaggio/Framework: Python (proposto)
     *   Utilità chiave: Strumenti di enumerazione (es. `dnsenum`, `enum4linux`, script personalizzati), `requests`, `pika`
-    *   Comunicazione: Consuma da `RABBITMQ_ENUM_SCAN_REQUEST_QUEUE`, pubblica su `RABBITMQ_SCAN_STATUS_UPDATE_QUEUE`, interagisce con API Gateway.
+    *   Comunicazione: Consuma da `RABBITMQ_GCE_SCAN_REQUEST_QUEUE`, pubblica su `RABBITMQ_SCAN_STATUS_UPDATE_QUEUE`, interagisce con API Gateway.
 *   **Modulo Scanner Web (plugins/web_scanner):** (Da definire in dettaglio)
     *   Immagine Base: `kalilinux/kali-rolling`
     *   Linguaggio/Framework: Python

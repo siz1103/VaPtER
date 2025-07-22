@@ -50,7 +50,7 @@ export function isActiveScan(status: string): boolean {
     'Queued', 
     'Nmap Scan Running',
     'Finger Scan Running',
-    'Enum Scan Running',
+    'Gce Scan Running',
     'Web Scan Running',
     'Vuln Lookup Running',
     'Report Generation Running'
@@ -73,7 +73,7 @@ export function getStatusColor(status: string): string {
       return 'default'
     case 'Nmap Scan Running':
     case 'Finger Scan Running':
-    case 'Enum Scan Running':
+    case 'Gce Scan Running':
     case 'Web Scan Running':
     case 'Vuln Lookup Running':
     case 'Report Generation Running':
@@ -81,7 +81,7 @@ export function getStatusColor(status: string): string {
     case 'Completed':
     case 'Nmap Scan Completed':
     case 'Finger Scan Completed':
-    case 'Enum Scan Completed':
+    case 'Gce Scan Completed':
     case 'Web Scan Completed':
     case 'Vuln Lookup Completed':
       return 'green'
