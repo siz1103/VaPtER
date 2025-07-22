@@ -145,6 +145,12 @@ vapter/
 │   ├── Test.md                       # ✅ DA AGGIORNARE - Test da eseguire per testare i vari componenti
 │   ├── Utils.md                      # ✅ DA AGGIORNARE - Comandi utili per sviluppo e l'avvio del sistema
 │   └── Workflow.md                   # Spiegazione workflow scansione
+├── gce/                              # Directory per Greenbone Community Edition
+│   ├── docker-compose-gce.yml        # Docker compose per GCE
+│   ├── .env.gce.example             # Esempio variabili d'ambiente
+│   ├── .env.gce                     # Variabili d'ambiente (da creare)
+│   ├── README.md                    # Documentazione GCE
+│   └── start-gce.sh                 # Script di avvio
 ├── docker-compose.yml                # ✅ AGGIORNATO - Docker Compose configuration
 ├── .env.example                      # ✅ AGGIORNATO - File esempio delle env utilizzate
 └── .gitignore                        # file gitignore
