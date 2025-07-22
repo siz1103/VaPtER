@@ -46,7 +46,7 @@ services:
       - gce_network
 
   gce-notus-data:
-    image: registry.community.greenbone.net/community/notus-data:stable
+    image: registry.community.greenbone.net/community/notus-data:latest
     container_name: gce_notus_data
     volumes:
       - gce_notus_data_vol:/mnt
