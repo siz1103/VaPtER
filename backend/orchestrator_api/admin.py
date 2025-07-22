@@ -111,7 +111,7 @@ class ScanTypeAdmin(admin.ModelAdmin):
     """Admin configuration for ScanType model"""
     
     list_display = ['name', 'port_list', 'plugins_enabled', 'discovery_only', 'scans_count', 'created_at']
-    list_filter = ['only_discovery', 'plugin_finger', 'plugin_enum', 'plugin_web', 'plugin_vuln_lookup', 'created_at']
+    list_filter = ['only_discovery', 'plugin_finger', 'plugin_gce', 'plugin_web', 'plugin_vuln_lookup', 'created_at']
     search_fields = ['name', 'description']
     readonly_fields = ['created_at', 'updated_at', 'deleted_at']
     
@@ -123,7 +123,7 @@ class ScanTypeAdmin(admin.ModelAdmin):
             'fields': ('only_discovery', 'consider_alive', 'be_quiet')
         }),
         ('Plugins', {
-            'fields': ('plugin_finger', 'plugin_enum', 'plugin_web', 'plugin_vuln_lookup'),
+            'fields': ('plugin_finger', 'plugin_gce', 'plugin_web', 'plugin_vuln_lookup'),
             'description': 'Select which plugins to run after the initial nmap scan'
         }),
         ('Timestamps', {
@@ -137,8 +137,8 @@ class ScanTypeAdmin(admin.ModelAdmin):
         plugins = []
         if obj.plugin_finger:
             plugins.append('Fingerprint')
-        if obj.plugin_enum:
-            plugins.append('Enum')
+        if obj.plugin_gce:
+            plugins.append('Gce')
         if obj.plugin_web:
             plugins.append('Web')
         if obj.plugin_vuln_lookup:
@@ -215,7 +215,7 @@ class ScanDetailInline(admin.StackedInline):
         ('open_ports', 'os_guess'),
         ('nmap_started_at', 'nmap_completed_at'),
         ('finger_started_at', 'finger_completed_at'),
-        ('enum_started_at', 'enum_completed_at'),
+        ('gce_started_at', 'gce_completed_at'),
         ('web_started_at', 'web_completed_at'),
         ('vuln_started_at', 'vuln_completed_at'),
         ('created_at', 'updated_at')
@@ -233,7 +233,7 @@ class ScanAdmin(admin.ModelAdmin):
     readonly_fields = [
         'initiated_at', 'created_at', 'updated_at', 'deleted_at', 'duration_display',
         'parsed_nmap_results_formatted', 'parsed_finger_results_formatted', 
-        'parsed_enum_results_formatted', 'parsed_web_results_formatted', 
+        'parsed_gce_results_formatted', 'parsed_web_results_formatted', 
         'parsed_vuln_results_formatted'
     ]
     
@@ -246,13 +246,13 @@ class ScanAdmin(admin.ModelAdmin):
         }),
         ('Results', {
             'fields': ('parsed_nmap_results', 'parsed_finger_results', 
-                      'parsed_enum_results', 'parsed_web_results', 
+                      'parsed_gce_results', 'parsed_web_results', 
                       'parsed_vuln_results'),
             'classes': ('collapse',)
         }),
         ('Formatted Results (Read Only)', {
             'fields': ('parsed_nmap_results_formatted', 'parsed_finger_results_formatted', 
-                      'parsed_enum_results_formatted', 'parsed_web_results_formatted', 
+                      'parsed_gce_results_formatted', 'parsed_web_results_formatted', 
                       'parsed_vuln_results_formatted'),
             'classes': ('collapse',)
         }),
@@ -314,12 +314,12 @@ class ScanAdmin(admin.ModelAdmin):
         return '-'
     parsed_finger_results_formatted.short_description = 'Fingerprint Results (Formatted)'
     
-    def parsed_enum_results_formatted(self, obj):
-        """Display formatted enum results"""
-        if obj.parsed_enum_results:
-            return mark_safe(f'<pre style="white-space: pre-wrap; max-height: 300px; overflow-y: auto;">{json.dumps(obj.parsed_enum_results, indent=2)}</pre>')
+    def parsed_gce_results_formatted(self, obj):
+        """Display formatted gce results"""
+        if obj.parsed_gce_results:
+            return mark_safe(f'<pre style="white-space: pre-wrap; max-height: 300px; overflow-y: auto;">{json.dumps(obj.parsed_gce_results, indent=2)}</pre>')
         return '-'
-    parsed_enum_results_formatted.short_description = 'Enum Results (Formatted)'
+    parsed_gce_results_formatted.short_description = 'Gce Results (Formatted)'
     
     def parsed_web_results_formatted(self, obj):
         """Display formatted web results"""
@@ -364,7 +364,7 @@ class ScanDetailAdmin(admin.ModelAdmin):
             'fields': (
                 ('nmap_started_at', 'nmap_completed_at'),
                 ('finger_started_at', 'finger_completed_at'),
-                ('enum_started_at', 'enum_completed_at'),
+                ('gce_started_at', 'gce_completed_at'),
                 ('web_started_at', 'web_completed_at'),
                 ('vuln_started_at', 'vuln_completed_at')
             )

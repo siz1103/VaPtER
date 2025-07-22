@@ -166,12 +166,12 @@ function ScanRow({ scan, scanTypes, onRestart, onCancel, onDelete, onChangeScanT
                   </div>
                 )}
                 
-                {scan.parsed_enum_results && (
+                {scan.parsed_gce_results && (
                   <div>
-                    <div className="font-medium text-muted-foreground mb-2">Enumeration Results</div>
+                    <div className="font-medium text-muted-foreground mb-2">Gce Results</div>
                     <div className="bg-muted p-3 rounded-md">
                       <pre className="text-xs overflow-x-auto whitespace-pre-wrap">
-                        {JSON.stringify(scan.parsed_enum_results, null, 2)}
+                        {JSON.stringify(scan.parsed_gce_results, null, 2)}
                       </pre>
                     </div>
                   </div>

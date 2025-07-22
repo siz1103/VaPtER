@@ -34,7 +34,7 @@ export interface ScanType {
   port_list?: number
   port_list_name?: string
   plugin_finger: boolean
-  plugin_enum: boolean
+  plugin_gce: boolean
   plugin_web: boolean
   plugin_vuln_lookup: boolean
   description?: string
@@ -78,7 +78,7 @@ export interface Scan {
   duration_seconds?: number
   parsed_nmap_results?: any
   parsed_finger_results?: any
-  parsed_enum_results?: any
+  parsed_gce_results?: any
   parsed_web_results?: any
   parsed_vuln_results?: any
   error_message?: string
@@ -97,8 +97,8 @@ export interface ScanDetail {
   nmap_completed_at?: string
   finger_started_at?: string
   finger_completed_at?: string
-  enum_started_at?: string
-  enum_completed_at?: string
+  gce_started_at?: string
+  gce_completed_at?: string
   web_started_at?: string
   web_completed_at?: string
   vuln_started_at?: string
@@ -114,8 +114,8 @@ export type ScanStatus =
   | 'Nmap Scan Completed'
   | 'Finger Scan Running'
   | 'Finger Scan Completed'
-  | 'Enum Scan Running'
-  | 'Enum Scan Completed'
+  | 'Gce Scan Running'
+  | 'Gce Scan Completed'
   | 'Web Scan Running'
   | 'Web Scan Completed'
   | 'Vuln Lookup Running'

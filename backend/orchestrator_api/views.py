@@ -128,8 +128,8 @@ class ScanTypeViewSet(viewsets.ModelViewSet):
         # Filter by enabled plugins
         if self.request.query_params.get('with_finger'):
             queryset = queryset.filter(plugin_finger=True)
-        if self.request.query_params.get('with_enum'):
-            queryset = queryset.filter(plugin_enum=True)
+        if self.request.query_params.get('with_gce'):
+            queryset = queryset.filter(plugin_gce=True)
         if self.request.query_params.get('with_web'):
             queryset = queryset.filter(plugin_web=True)
         if self.request.query_params.get('with_vuln'):
@@ -313,7 +313,7 @@ class ScanViewSet(viewsets.ModelViewSet):
         scan.error_message = None
         scan.parsed_nmap_results = None
         scan.parsed_finger_results = None
-        scan.parsed_enum_results = None
+        scan.parsed_gce_results = None
         scan.parsed_web_results = None
         scan.parsed_vuln_results = None
         scan.report_path = None

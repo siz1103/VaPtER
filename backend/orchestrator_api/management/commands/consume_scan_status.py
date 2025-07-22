@@ -162,8 +162,8 @@ class Command(BaseCommand):
                     scan.status = 'Finger Scan Running'
                     scan.save()
             
-            # Add handlers for other modules (enum, web, vuln_lookup) as they are implemented
-            elif module in ['enum', 'web', 'vuln_lookup']:
+            # Add handlers for other modules (gce, web, vuln_lookup) as they are implemented
+            elif module in ['gce', 'web', 'vuln_lookup']:
                 self.stdout.write(self.style.WARNING(f"Handler for {module} not yet implemented"))
                 # For now, just update status
                 if status == 'error':

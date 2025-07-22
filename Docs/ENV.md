@@ -52,7 +52,7 @@ Il sistema VaPtER utilizza diverse variabili d'ambiente per la configurazione. D
 | Variabile | Descrizione | Valore di Default |
 |-----------|-------------|------------------|
 | `RABBITMQ_NMAP_SCAN_REQUEST_QUEUE` | Coda richieste scan Nmap | `nmap_scan_requests` |
-| `RABBITMQ_ENUM_SCAN_REQUEST_QUEUE` | Coda richieste scan Enum | `enum_scan_requests` |
+| `RABBITMQ_GCE_SCAN_REQUEST_QUEUE` | Coda richieste scan Gce | `gce_scan_requests` |
 | `RABBITMQ_FINGERPRINT_SCAN_REQUEST_QUEUE` | Coda richieste scan Fingerprint | `fingerprint_scan_requests` |
 | `RABBITMQ_WEB_SCAN_REQUEST_QUEUE` | Coda richieste scan Web | `web_scan_requests` |
 | `RABBITMQ_VULN_LOOKUP_REQUEST_QUEUE` | Coda richieste lookup vulnerabilità | `vuln_lookup_requests` |

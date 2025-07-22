@@ -1,171 +1,118 @@
 version: '3.8'
 
 services:
-  gce-vulnerability-tests:
+  vulnerability-tests:
     image: registry.community.greenbone.net/community/vulnerability-tests
-    container_name: gce_vulnerability_tests
     environment:
       FEED_RELEASE: "24.10"
     volumes:
-      - gce_vt_data_vol:/mnt
-    networks:
-      - gce_network
+      - vt_data_vol:/mnt
 
-  gce-notus-data:
+  notus-data:
     image: registry.community.greenbone.net/community/notus-data
-    container_name: gce_notus_data
     volumes:
-      - gce_notus_data_vol:/mnt
-    networks:
-      - gce_network
+      - notus_data_vol:/mnt
 
-  gce-scap-data:
+  scap-data:
     image: registry.community.greenbone.net/community/scap-data
-    container_name: gce_scap_data
     volumes:
-      - gce_scap_data_vol:/mnt
-    networks:
-      - gce_network
+      - scap_data_vol:/mnt
 
-  gce-cert-bund-data:
+  cert-bund-data:
     image: registry.community.greenbone.net/community/cert-bund-data
-    container_name: gce_cert_data
     volumes:
-      - gce_cert_data_vol:/mnt
-    networks:
-      - gce_network
+      - cert_data_vol:/mnt
 
-  gce-dfn-cert-data:
+  dfn-cert-data:
     image: registry.community.greenbone.net/community/dfn-cert-data
-    container_name: gce_dfn_data
     volumes:
-      - gce_cert_data_vol:/mnt
+      - cert_data_vol:/mnt
     depends_on:
-      - gce-cert-bund-data
-    networks:
-      - gce_network
+      - cert-bund-data
 
-  gce-data-objects:
+  data-objects:
     image: registry.community.greenbone.net/community/data-objects
-    container_name: gce_objects_data
     environment:
       FEED_RELEASE: "24.10"
     volumes:
-      - gce_data_objects_vol:/mnt
-    networks:
-      - gce_network
+      - data_objects_vol:/mnt
 
-  gce-report-formats:
+  report-formats:
     image: registry.community.greenbone.net/community/report-formats
-    container_name: gce_reports_format
     environment:
       FEED_RELEASE: "24.10"
     volumes:
-      - gce_data_objects_vol:/mnt
+      - data_objects_vol:/mnt
     depends_on:
-      - gce-data-objects
-    networks:
-      - gce_network
+      - data-objects
 
-  gce-gpg-data:
+  gpg-data:
     image: registry.community.greenbone.net/community/gpg-data
-    container_name: gce_gpg_data
     volumes:
-      - gce_gpg_data_vol:/mnt
-    networks:
-      - gce_network
+      - gpg_data_vol:/mnt
 
-  gce-redis-server:
+  redis-server:
     image: registry.community.greenbone.net/community/redis-server
-    container_name: gce_redis
     restart: on-failure
     volumes:
-      - gce_redis_socket_vol:/run/redis/
-    networks:
-      - gce_network
+      - redis_socket_vol:/run/redis/
 
-  gce-pg-gvm:
+  pg-gvm:
     image: registry.community.greenbone.net/community/pg-gvm:stable
-    container_name: gce_pg_gvm
     restart: on-failure
-    environment:
-      POSTGRES_DB: ${GCE_POSTGRES_DB:-gvmd}
-      POSTGRES_USER: ${GCE_POSTGRES_USER:-gce}
-      POSTGRES_PASSWORD: ${GCE_POSTGRES_PASSWORD:-gce_password_123}
     volumes:
-      - gce_psql_data_vol:/var/lib/postgresql
-      - gce_psql_socket_vol:/var/run/postgresql
-    networks:
-      - gce_network
+      - psql_data_vol:/var/lib/postgresql
+      - psql_socket_vol:/var/run/postgresql
 
-  gce-gvmd:
+  gvmd:
     image: registry.community.greenbone.net/community/gvmd:stable
-    container_name: gce_gvmd
     restart: on-failure
     volumes:
-      - gce_gvmd_data_vol:/var/lib/gvm
-      - gce_scap_data_vol:/var/lib/gvm/scap-data/
-      - gce_cert_data_vol:/var/lib/gvm/cert-data
-      - gce_data_objects_vol:/var/lib/gvm/data-objects/gvmd
-      - gce_vt_data_vol:/var/lib/openvas/plugins
-      - gce_psql_data_vol:/var/lib/postgresql
-      - gce_gvmd_socket_vol:/run/gvmd
-      - gce_ospd_openvas_socket_vol:/run/ospd
-      - gce_psql_socket_vol:/var/run/postgresql
-    environment:
-      GVMD_POSTGRESQL_HOST: gce-pg-gvm
-      GVMD_POSTGRESQL_PORT: 5432
-      GVMD_POSTGRESQL_NAME: ${GCE_POSTGRES_DB:-gvmd}
-      GVMD_POSTGRESQL_USER: ${GCE_POSTGRES_USER:-gce}
-      GVMD_POSTGRESQL_PASSWORD: ${GCE_POSTGRES_PASSWORD:-gce_password_123}
-      # Admin user configuration
-      GVMD_USER: ${GCE_ADMIN_USER:-admin}
-      GVMD_PASSWORD: ${GCE_ADMIN_PASSWORD:-admin_password_123}
+      - gvmd_data_vol:/var/lib/gvm
+      - scap_data_vol:/var/lib/gvm/scap-data/
+      - cert_data_vol:/var/lib/gvm/cert-data
+      - data_objects_vol:/var/lib/gvm/data-objects/gvmd
+      - vt_data_vol:/var/lib/openvas/plugins
+      - psql_data_vol:/var/lib/postgresql
+      - gvmd_socket_vol:/run/gvmd
+      - ospd_openvas_socket_vol:/run/ospd
+      - psql_socket_vol:/var/run/postgresql
     depends_on:
-      gce-pg-gvm:
+      pg-gvm:
         condition: service_started
-      gce-scap-data:
+      scap-data:
         condition: service_completed_successfully
-      gce-cert-bund-data:
+      cert-bund-data:
         condition: service_completed_successfully
-      gce-dfn-cert-data:
+      dfn-cert-data:
         condition: service_completed_successfully
-      gce-data-objects:
+      data-objects:
         condition: service_completed_successfully
-      gce-report-formats:
+      report-formats:
         condition: service_completed_successfully
-    networks:
-      - gce_network
 
-  gce-gsa:
+  gsa:
     image: registry.community.greenbone.net/community/gsa:stable
-    container_name: gce_gsa
     restart: on-failure
-    environment:
-      GVMD_HOST: gce-gvmd
-      GVMD_PORT: 9390
-      # Cambiamo le porte per evitare conflitti futuri
-      GSAD_ARGS: "--listen=0.0.0.0 --port=9392 --http-only"
     ports:
-      - "${GCE_WEB_PORT:-8443}:9392"
+      - 127.0.0.1:9392:80
     volumes:
-      - gce_gvmd_socket_vol:/run/gvmd
+      - gvmd_socket_vol:/run/gvmd
     depends_on:
-      - gce-gvmd
+      - gvmd
   # Sets log level of openvas to the set LOG_LEVEL within the env
   # and changes log output to /var/log/openvas instead /var/log/gvm
   # to reduce likelyhood of unwanted log interferences
-  gce-configure-openvas:
+  configure-openvas:
     image: registry.community.greenbone.net/community/openvas-scanner:stable
-    container_name: gce_configure_openvas
     volumes:
-      - gce_openvas_data_vol:/mnt
-      - gce_openvas_log_data_vol:/var/log/openvas
+      - openvas_data_vol:/mnt
+      - openvas_log_data_vol:/var/log/openvas
     command:
       - /bin/sh
       - -c
       - |
-        printf "table_driven_lsc = yes\nopenvasd_server = http://gce-openvasd:80\n" > /mnt/openvas.conf
+        printf "table_driven_lsc = yes\nopenvasd_server = http://openvasd:80\n" > /mnt/openvas.conf
         sed "s/127/128/" /etc/openvas/openvas_log.conf | sed 's/gvm/openvas/' > /mnt/openvas_log.conf
         chmod 644 /mnt/openvas.conf
         chmod 644 /mnt/openvas_log.conf
@@ -173,17 +120,12 @@ services:
         chmod 666 /var/log/openvas/openvas.log
 
   # shows logs of openvas
-  gce-openvas:
+  openvas:
     image: registry.community.greenbone.net/community/openvas-scanner:stable
-    container_name: gce_openvas    
     restart: on-failure
-    environment:
-      OSPD_OPENVAS_MQTT_BROKER_ADDRESS: gce-mqtt-broker
-      OSPD_OPENVAS_NOTUS_FEED_DIR: /var/lib/notus/advisories
-      OSPD_OPENVAS_DISABLE_NOTUS: ${GCE_DISABLE_NOTUS:-false}
     volumes:
-      - gce_openvas_data_vol:/etc/openvas
-      - gce_openvas_log_data_vol:/var/log/openvas
+      - openvas_data_vol:/etc/openvas
+      - openvas_log_data_vol:/var/log/openvas
     command:
       - /bin/sh
       - -c
@@ -191,17 +133,11 @@ services:
         cat /etc/openvas/openvas.conf
         tail -f /var/log/openvas/openvas.log
     depends_on:
-      gce-configure-openvas:
+      configure-openvas:
         condition: service_completed_successfully
-    cap_add:
-      - NET_ADMIN
-      - NET_RAW
-    networks:
-      - gce_network
 
-  gce-openvasd:
+  openvasd:
     image: registry.community.greenbone.net/community/openvas-scanner:stable
-    container_name: gce_openvasd
     restart: on-failure
     environment:
       # `service_notus` is set to disable everything but notus,
@@ -210,32 +146,29 @@ services:
       GNUPGHOME: /etc/openvas/gnupg
       LISTENING: 0.0.0.0:80
     volumes:
-      - gce_openvas_data_vol:/etc/openvas
-      - gce_openvas_log_data_vol:/var/log/openvas
-      - gce_gpg_data_vol:/etc/openvas/gnupg
-      - gce_notus_data_vol:/var/lib/notus
+      - openvas_data_vol:/etc/openvas
+      - openvas_log_data_vol:/var/log/openvas
+      - gpg_data_vol:/etc/openvas/gnupg
+      - notus_data_vol:/var/lib/notus
     # enable port forwarding when you want to use the http api from your host machine
-    ports:
-      - 3000:80
+    # ports:
+    #   - 127.0.0.1:3000:80
     depends_on:
-      gce-vulnerability-tests:
+      vulnerability-tests:
         condition: service_completed_successfully
-      gce-configure-openvas:
+      configure-openvas:
         condition: service_completed_successfully
-      gce-gpg-data:
+      gpg-data:
         condition: service_completed_successfully
     networks:
-      - gce_network
+      default:
+        aliases:
+          - openvasd
 
-  gce-ospd-openvas:
+  ospd-openvas:
     image: registry.community.greenbone.net/community/ospd-openvas:stable
-    container_name: gce_ospd_openvas
     restart: on-failure
-    environment:
-      OSPD_OPENVAS_MQTT_BROKER_ADDRESS: gce-mqtt-broker
-      OSPD_OPENVAS_NOTUS_FEED_DIR: /var/lib/notus/advisories
-      OSPD_OPENVAS_DISABLE_NOTUS: ${GCE_DISABLE_NOTUS:-false}
-    hostname: gce-ospd-openvas.local
+    hostname: ospd-openvas.local
     cap_add:
       - NET_ADMIN # for capturing packages in promiscuous mode
       - NET_RAW # for raw sockets e.g. used for the boreas alive detection
@@ -254,56 +187,44 @@ services:
         "666",
       ]
     volumes:
-      - gce_gpg_data_vol:/etc/openvas/gnupg
-      - gce_vt_data_vol:/var/lib/openvas/plugins
-      - gce_notus_data_vol:/var/lib/notus
-      - gce_ospd_openvas_socket_vol:/run/ospd
-      - gce_redis_socket_vol:/run/redis/
-      - gce_openvas_data_vol:/etc/openvas/
-      - gce_openvas_log_data_vol:/var/log/openvas
+      - gpg_data_vol:/etc/openvas/gnupg
+      - vt_data_vol:/var/lib/openvas/plugins
+      - notus_data_vol:/var/lib/notus
+      - ospd_openvas_socket_vol:/run/ospd
+      - redis_socket_vol:/run/redis/
+      - openvas_data_vol:/etc/openvas/
+      - openvas_log_data_vol:/var/log/openvas
     depends_on:
-      gce-redis-server:
+      redis-server:
         condition: service_started
-      gce-gpg-data:
+      gpg-data:
         condition: service_completed_successfully
-      gce-vulnerability-tests:
+      vulnerability-tests:
         condition: service_completed_successfully
-      gce-configure-openvas:
+      configure-openvas:
         condition: service_completed_successfully
-    networks:
-      - gce_network
 
-  gce-gvm-tools:
+  gvm-tools:
     image: registry.community.greenbone.net/community/gvm-tools
-    container_name: gce_gvm_tools
     volumes:
-      - gce_gvmd_socket_vol:/run/gvmd
-      - gce_ospd_openvas_socket_vol:/run/ospd
+      - gvmd_socket_vol:/run/gvmd
+      - ospd_openvas_socket_vol:/run/ospd
     depends_on:
-      - gce-gvmd
-      - gce-ospd-openvas
-    networks:
-      - gce_network
+      - gvmd
+      - ospd-openvas
 
-networks:
-  gce_network:
-    driver: bridge
-    # Facciamo in modo che possa comunicare con la rete di Vapter
-    external: false
-    name: gce_network
-    
 volumes:
-  gce_gpg_data_vol:
-  gce_scap_data_vol:
-  gce_cert_data_vol:
-  gce_data_objects_vol:
-  gce_gvmd_data_vol:
-  gce_psql_data_vol:
-  gce_vt_data_vol:
-  gce_notus_data_vol:
-  gce_psql_socket_vol:
-  gce_gvmd_socket_vol:
-  gce_ospd_openvas_socket_vol:
-  gce_redis_socket_vol:
-  gce_openvas_data_vol:
-  gce_openvas_log_data_vol:
+  gpg_data_vol:
+  scap_data_vol:
+  cert_data_vol:
+  data_objects_vol:
+  gvmd_data_vol:
+  psql_data_vol:
+  vt_data_vol:
+  notus_data_vol:
+  psql_socket_vol:
+  gvmd_socket_vol:
+  ospd_openvas_socket_vol:
+  redis_socket_vol:
+  openvas_data_vol:
+  openvas_log_data_vol:

@@ -90,7 +90,7 @@ class ScanTypeSerializer(serializers.ModelSerializer):
         model = ScanType
         fields = [
             'id', 'name', 'only_discovery', 'consider_alive', 'be_quiet',
-            'port_list', 'port_list_name', 'plugin_finger', 'plugin_enum',
+            'port_list', 'port_list_name', 'plugin_finger', 'plugin_gce',
             'plugin_web', 'plugin_vuln_lookup', 'description', 'created_at',
             'updated_at', 'enabled_plugins'
         ]
@@ -101,8 +101,8 @@ class ScanTypeSerializer(serializers.ModelSerializer):
         plugins = []
         if obj.plugin_finger:
             plugins.append('fingerprint')
-        if obj.plugin_enum:
-            plugins.append('enumeration')
+        if obj.plugin_gce:
+            plugins.append('gce')
         if obj.plugin_web:
             plugins.append('web_scanning')
         if obj.plugin_vuln_lookup:
@@ -284,7 +284,7 @@ class ScanDetailSerializer(serializers.ModelSerializer):
             'id', 'scan', 'open_ports', 'os_guess',
             'nmap_started_at', 'nmap_completed_at',
             'finger_started_at', 'finger_completed_at',
-            'enum_started_at', 'enum_completed_at',
+            'gce_started_at', 'gce_completed_at',
             'web_started_at', 'web_completed_at',
             'vuln_started_at', 'vuln_completed_at',
             'created_at', 'updated_at'
@@ -308,7 +308,7 @@ class ScanSerializer(serializers.ModelSerializer):
             'id', 'target', 'target_name', 'target_address', 'customer_name',
             'scan_type', 'scan_type_name', 'status', 'initiated_at',
             'started_at', 'completed_at', 'parsed_nmap_results',
-            'parsed_finger_results', 'parsed_enum_results', 'parsed_web_results',
+            'parsed_finger_results', 'parsed_gce_results', 'parsed_web_results',
             'parsed_vuln_results', 'error_message', 'report_path', 'details',
             'duration_seconds', 'created_at', 'updated_at'
         ]
@@ -341,7 +341,7 @@ class ScanCreateSerializer(serializers.ModelSerializer):
         # Check if there's already a running scan for this target
         running_statuses = [
             'Queued', 'Nmap Scan Running', 'Finger Scan Running',
-            'Enum Scan Running', 'Web Scan Running', 'Vuln Lookup Running',
+            'Gce Scan Running', 'Web Scan Running', 'Vuln Lookup Running',
             'Report Generation Running'
         ]
         
@@ -360,7 +360,7 @@ class ScanUpdateSerializer(serializers.ModelSerializer):
         model = Scan
         fields = [
             'status', 'started_at', 'completed_at', 'parsed_nmap_results',
-            'parsed_finger_results', 'parsed_enum_results', 'parsed_web_results',
+            'parsed_finger_results', 'parsed_gce_results', 'parsed_web_results',
             'parsed_vuln_results', 'error_message', 'report_path'
         ]
     

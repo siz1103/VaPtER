@@ -54,13 +54,13 @@ e associare anche i gruppi di porte trovati prima, più i plugin da eseguire com
     - Aggiorna il record della scansione nel **Database (PostgreSQL)** con i risultati di Nmap (es. `parsed_nmap_results`).
     - Dopo che il **Backend Consumer** ha aggiornato lo stato (es. a "Nmap Scan Completed") basandosi sui messaggi da `RABBITMQ_SCAN_STATUS_UPDATE_QUEUE`, l'Orchestratore (tramite un task periodico, un segnale Django o logica post-salvataggio del modello Scan) può:
         - Controllare se lo stato è "Nmap Scan Completed".
-        - Decidere se avviare la fase successiva (es. Enum scan) in base ai plugin selezionati nel tipo di scansione. Se sì:
-            - Prepara un messaggio JSON per il modulo Enum (contenente `scan_id`, `target_host`, e forse i risultati di Nmap).
-            - Pubblica questo messaggio sulla coda `RABBITMQ_ENUM_SCAN_REQUEST_QUEUE`.
+        - Decidere se avviare la fase successiva (es. Gce scan) in base ai plugin selezionati nel tipo di scansione. Se sì:
+            - Prepara un messaggio JSON per il modulo Gce (contenente `scan_id`, `target_host`, e forse i risultati di Nmap).
+            - Pubblica questo messaggio sulla coda `RABBITMQ_GCE_SCAN_REQUEST_QUEUE`.
 
-10. Il **modulo enum** rimane in ascolto sulla coda `RABBITMQ_ENUM_SCAN_REQUEST_QUEUE`, quando arriva un messaggio:
+10. Il **modulo gce** rimane in ascolto sulla coda `RABBITMQ_GCE_SCAN_REQUEST_QUEUE`, quando arriva un messaggio:
     - Avvia la scansione.
-    - Pubblica aggiornamenti di stato (es. `{"scan_id": X, "module": "enum", "status": "running"}` e poi `{"scan_id": X, "module": "enum", "status": "completed"}` o `{"scan_id": X, "module": "enum", "status": "error"}`) su `RABBITMQ_SCAN_STATUS_UPDATE_QUEUE`.
+    - Pubblica aggiornamenti di stato (es. `{"scan_id": X, "module": "gce", "status": "running"}` e poi `{"scan_id": X, "module": "gce", "status": "completed"}` o `{"scan_id": X, "module": "gce", "status": "error"}`) su `RABBITMQ_SCAN_STATUS_UPDATE_QUEUE`.
     - Al termine, invia i risultati all'API Gateway (`PATCH /api/orchestrator/scans/{scan_id}/`).
 
 11. si ripetono i punti dal 7. al 10. per tutti i plugin selezionati

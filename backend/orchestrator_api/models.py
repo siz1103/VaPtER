@@ -166,9 +166,9 @@ class ScanType(TimestampMixin, SoftDeleteMixin):
         default=False,
         help_text="Enable fingerprinting plugin"
     )
-    plugin_enum = models.BooleanField(
+    plugin_gce = models.BooleanField(
         default=False,
-        help_text="Enable enumeration plugin"
+        help_text="Enable GCE plugin"
     )
     plugin_web = models.BooleanField(
         default=False,
@@ -252,8 +252,8 @@ class Scan(TimestampMixin, SoftDeleteMixin):
         ('Nmap Scan Completed', 'Nmap Scan Completed'),
         ('Finger Scan Running', 'Finger Scan Running'),
         ('Finger Scan Completed', 'Finger Scan Completed'),
-        ('Enum Scan Running', 'Enum Scan Running'),
-        ('Enum Scan Completed', 'Enum Scan Completed'),
+        ('GCE Scan Running', 'GCE Scan Running'),
+        ('GCE Scan Completed', 'GCE Scan Completed'),
         ('Web Scan Running', 'Web Scan Running'),
         ('Web Scan Completed', 'Web Scan Completed'),
         ('Vuln Lookup Running', 'Vuln Lookup Running'),
@@ -291,7 +291,7 @@ class Scan(TimestampMixin, SoftDeleteMixin):
     # Results storage
     parsed_nmap_results = models.JSONField(null=True, blank=True)
     parsed_finger_results = models.JSONField(null=True, blank=True)
-    parsed_enum_results = models.JSONField(null=True, blank=True)
+    parsed_gce_results = models.JSONField(null=True, blank=True)
     parsed_web_results = models.JSONField(null=True, blank=True)
     parsed_vuln_results = models.JSONField(null=True, blank=True)
     
@@ -352,8 +352,8 @@ class ScanDetail(TimestampMixin, SoftDeleteMixin):
     nmap_completed_at = models.DateTimeField(null=True, blank=True)
     finger_started_at = models.DateTimeField(null=True, blank=True)
     finger_completed_at = models.DateTimeField(null=True, blank=True)
-    enum_started_at = models.DateTimeField(null=True, blank=True)
-    enum_completed_at = models.DateTimeField(null=True, blank=True)
+    gce_started_at = models.DateTimeField(null=True, blank=True)
+    gce_completed_at = models.DateTimeField(null=True, blank=True)
     web_started_at = models.DateTimeField(null=True, blank=True)
     web_completed_at = models.DateTimeField(null=True, blank=True)
     vuln_started_at = models.DateTimeField(null=True, blank=True)
