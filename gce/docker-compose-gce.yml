@@ -285,6 +285,13 @@ services:
     networks:
       - gce_network
 
+networks:
+  gce_network:
+    driver: bridge
+    # Facciamo in modo che possa comunicare con la rete di Vapter
+    external: false
+    name: gce_network
+    
 volumes:
   gce_gpg_data_vol:
   gce_scap_data_vol:
