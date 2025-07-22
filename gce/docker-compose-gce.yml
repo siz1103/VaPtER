@@ -54,7 +54,7 @@ services:
       - gce_network
 
   gce-vulnerability-tests:
-    image: registry.community.greenbone.net/community/vulnerability-tests:stable
+    image: registry.community.greenbone.net/community/vulnerability-tests:latest
     container_name: gce_vulnerability_tests
     environment:
       STORAGE_PATH: /var/lib/openvas/22.04/vt-data/nasl
