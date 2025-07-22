@@ -262,13 +262,13 @@ services:
       - gce_openvas_data_vol:/etc/openvas/
       - gce_openvas_log_data_vol:/var/log/openvas
     depends_on:
-      gce_redis-server:
+      gce-redis-server:
         condition: service_started
-      gce_gpg-data:
+      gce-gpg-data:
         condition: service_completed_successfully
-      gce_vulnerability-tests:
+      gce-vulnerability-tests:
         condition: service_completed_successfully
-      gce_configure-openvas:
+      gce-configure-openvas:
         condition: service_completed_successfully
     networks:
       - gce_network
