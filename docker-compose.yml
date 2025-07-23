@@ -1,29 +1,29 @@
-# docker-compose.yml
-
 version: '3.8'
 
 services:
-  postgres:
-    image: postgres:16
+  # PostgreSQL Database
+  db:
+    image: postgres:16-alpine
+    container_name: vapter_db
     environment:
-      POSTGRES_DB: vapter
-      POSTGRES_USER: vapter
-      POSTGRES_PASSWORD: vapter_password
+      POSTGRES_DB: ${POSTGRES_DB:-vapter}
+      POSTGRES_USER: ${POSTGRES_USER:-vapter}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vapter123}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
     networks:
       - vapter_network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U vapter"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+    restart: unless-stopped
 
+  # RabbitMQ Message Broker
   rabbitmq:
-    image: rabbitmq:3.12-management
+    image: rabbitmq:3.12-management-alpine
+    container_name: vapter_rabbitmq
     environment:
-      RABBITMQ_DEFAULT_USER: vapter
-      RABBITMQ_DEFAULT_PASS: vapter_password
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-vapter}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-vapter123}
       # Configurazione heartbeat e timeout
       RABBITMQ_HEARTBEAT: 60
       RABBITMQ_CHANNEL_MAX: 200
@@ -33,180 +33,214 @@ services:
       RABBITMQ_TCP_KEEPALIVE_IDLE: 60
       RABBITMQ_TCP_KEEPALIVE_INTVL: 10
       RABBITMQ_TCP_KEEPALIVE_CNT: 10
-    ports:
-      - "5672:5672"
-      - "15672:15672"
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
       # Configurazione avanzata RabbitMQ
       - ./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+    ports:
+      - "5672:5672"      # AMQP port
+      - "15672:15672"    # Management UI
     networks:
       - vapter_network
+    restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "rabbitmq-diagnostics -q ping"]
       interval: 30s
       timeout: 10s
       retries: 5
 
+  # Django Backend Orchestrator
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    container_name: vapter_backend
     environment:
-      - DATABASE_URL=postgresql://vapter:vapter_password@postgres:5432/vapter
-      - RABBITMQ_HOST=rabbitmq
-      - RABBITMQ_PORT=5672
-      - RABBITMQ_USER=vapter
-      - RABBITMQ_PASSWORD=vapter_password
       - DJANGO_SETTINGS_MODULE=vapter_backend.settings
-      - PYTHONUNBUFFERED=1
-    depends_on:
-      postgres:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
+      - DEBUG=${DEBUG:-True}
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-in-production}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-vapter}:${POSTGRES_PASSWORD:-vapter123}@db:5432/${POSTGRES_DB:-vapter}
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-vapter}:${RABBITMQ_PASSWORD:-vapter123}@rabbitmq:5672/
+      - INTERNAL_API_GATEWAY_URL=http://api_gateway:8080
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-http://vapter.szini.it:3000,http://localhost:3000}
     volumes:
       - ./backend:/app
-      - static_volume:/app/staticfiles
+      - backend_media:/app/media
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - rabbitmq
     networks:
       - vapter_network
+    restart: unless-stopped
     command: >
-      sh -c "
-        python manage.py makemigrations orchestrator_api &&
-        python manage.py migrate &&
-        python manage.py collectstatic --noinput &&
-        python manage.py loaddata initial_data.json &&
-        python manage.py runserver 0.0.0.0:8000
-      "
+      sh -c "python manage.py makemigrations orchestrator_api &&
+             python manage.py migrate &&
+             python manage.py collectstatic --noinput &&
+             python manage.py loaddata initial_data.json &&
+             python manage.py runserver 0.0.0.0:8000"
 
+  # Django Backend Consumer (for RabbitMQ)
   backend_consumer:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    container_name: vapter_backend_consumer
     environment:
-      - DATABASE_URL=postgresql://vapter:vapter_password@postgres:5432/vapter
-      - RABBITMQ_HOST=rabbitmq
-      - RABBITMQ_PORT=5672
-      - RABBITMQ_USER=vapter
-      - RABBITMQ_PASSWORD=vapter_password
       - DJANGO_SETTINGS_MODULE=vapter_backend.settings
-      - PYTHONUNBUFFERED=1
-      # Queue names
-      - RABBITMQ_SCAN_STATUS_UPDATE_QUEUE=scan_status_updates
-      - RABBITMQ_FINGERPRINT_SCAN_REQUEST_QUEUE=fingerprint_scan_requests
-      - RABBITMQ_GCE_SCAN_REQUEST_QUEUE=gce_scan_requests
-      - RABBITMQ_WEB_SCAN_REQUEST_QUEUE=web_scan_requests
-      - RABBITMQ_VULN_LOOKUP_REQUEST_QUEUE=vuln_lookup_requests
-    depends_on:
-      postgres:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
+      - DEBUG=${DEBUG:-True}
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-in-production}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-vapter}:${POSTGRES_PASSWORD:-vapter123}@db:5432/${POSTGRES_DB:-vapter}
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-vapter}:${RABBITMQ_PASSWORD:-vapter123}@rabbitmq:5672/
     volumes:
       - ./backend:/app
+    depends_on:
+      - db
+      - rabbitmq
+      - backend
     networks:
       - vapter_network
-    command: python -m vapter_backend.consumer
+    restart: unless-stopped
+    command: python manage.py consume_scan_status
 
+  # FastAPI Gateway
   api_gateway:
     build:
       context: ./api_gateway
       dockerfile: Dockerfile
+    container_name: vapter_api_gateway
     environment:
+      - DEBUG=${DEBUG:-True}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - BACKEND_URL=http://backend:8000
-      - PYTHONUNBUFFERED=1
-    depends_on:
-      - backend
-    ports:
-      - "8080:8080"
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-http://vapter.szini.it:3000,http://localhost:3000}
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-in-production}
     volumes:
       - ./api_gateway:/app
-    networks:
-      - vapter_network
-
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    environment:
-      - VITE_API_URL=http://localhost:8080
     ports:
-      - "3000:3000"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
+      - "8080:8080"
+    depends_on:
+      - backend
     networks:
       - vapter_network
-    command: npm run dev -- --host 0.0.0.0 --port 3000
+    restart: unless-stopped
 
+# Nmap Scanner Module
   nmap_scanner:
     build:
       context: ./plugins/nmap_scanner
       dockerfile: Dockerfile
+    container_name: vapter_nmap_scanner
     environment:
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-vapter}:${RABBITMQ_PASSWORD:-vapter123}@rabbitmq:5672/
       - INTERNAL_API_GATEWAY_URL=http://api_gateway:8080
-      - RABBITMQ_HOST=rabbitmq
-      - RABBITMQ_PORT=5672
-      - RABBITMQ_USER=vapter
-      - RABBITMQ_PASSWORD=vapter_password
       - RABBITMQ_NMAP_SCAN_REQUEST_QUEUE=nmap_scan_requests
       - RABBITMQ_SCAN_STATUS_UPDATE_QUEUE=scan_status_updates
-      - PYTHONUNBUFFERED=1
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-      api_gateway:
-        condition: service_started
+      - NMAP_TIMEOUT=${NMAP_TIMEOUT:-3600}
+      - MAX_PARALLEL_SCANS=${MAX_PARALLEL_SCANS:-1}
+      - TEMP_RESULTS_DIR=/tmp/nmap_results
+      - KEEP_RAW_OUTPUT=${KEEP_RAW_OUTPUT:-false}
     volumes:
       - ./plugins/nmap_scanner:/app
+      - nmap_temp_results:/tmp/nmap_results
+    depends_on:
+      - rabbitmq
+      - api_gateway
     networks:
       - vapter_network
     restart: unless-stopped
-    command: python nmap_scanner.py
+    # Add security options for scanning
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    # Network mode for scanning (optional - use host mode for better network access)
+    # network_mode: host  # Uncomment if needed for advanced scanning
 
+  # React Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: vapter_frontend
+    environment:
+      - NODE_ENV=development
+      - VITE_API_URL=/api
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api_gateway
+    networks:
+      - vapter_network
+    restart: unless-stopped
+
+  fingerprint_scanner:
+    build: ./plugins/fingerprint_scanner
+    container_name: vapter_fingerprint_scanner
+    restart: unless-stopped
+    environment:
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - INTERNAL_API_GATEWAY_URL=http://api_gateway:8080
+      - RABBITMQ_URL=amqp://vapter:vapter123@rabbitmq:5672/
+      - RABBITMQ_FINGERPRINT_SCAN_REQUEST_QUEUE=fingerprint_scan_requests
+      - RABBITMQ_SCAN_STATUS_UPDATE_QUEUE=scan_status_updates
+      - FINGERPRINT_TIMEOUT_PER_PORT=60
+      - MAX_CONCURRENT_FINGERPRINTS=10
+    depends_on:
+      - rabbitmq
+      - api_gateway
+    networks:
+      - vapter_network
+    volumes:
+      - fingerprint_results:/tmp/fingerprint_results
+    cap_add:
+    - NET_RAW
+    - NET_ADMIN # Spesso necessario per operazioni di rete più ampie, includilo per sicurezza.
+
+# GCE Scanner Module
   gce_scanner:
     build:
       context: ./plugins/gce_scanner
       dockerfile: Dockerfile
+    container_name: vapter_gce_scanner
     environment:
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-vapter}:${RABBITMQ_PASSWORD:-vapter123}@rabbitmq:5672/
       - INTERNAL_API_GATEWAY_URL=http://api_gateway:8080
-      - RABBITMQ_HOST=rabbitmq
-      - RABBITMQ_PORT=5672
-      - RABBITMQ_USER=vapter
-      - RABBITMQ_PASSWORD=vapter_password
-      - RABBITMQ_GCE_SCAN_REQUEST_QUEUE=gce_scan_requests
-      - RABBITMQ_SCAN_STATUS_UPDATE_QUEUE=scan_status_updates
-      - GCE_SOCKET_PATH=/mnt/gce_sockets/gvmd.sock
-      - GCE_USERNAME=vapter_api
-      - GCE_PASSWORD=vapter_api
-      - GCE_SCAN_CONFIG_ID=daba56c8-73ec-11df-a475-002264764cea
-      - GCE_PORT_LIST_ID=c7e03b6c-3bbe-11e1-a057-406186ea4fc5
-      - PYTHONUNBUFFERED=1
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-      api_gateway:
-        condition: service_started
+      - RABBITMQ_GCE_SCAN_REQUEST_QUEUE=${RABBITMQ_GCE_SCAN_REQUEST_QUEUE:-gce_scan_requests}
+      - RABBITMQ_SCAN_STATUS_UPDATE_QUEUE=${RABBITMQ_SCAN_STATUS_UPDATE_QUEUE:-scan_status_updates}
+      - GCE_USERNAME=${GCE_USERNAME:-vapter_api}
+      - GCE_PASSWORD=${GCE_PASSWORD:-vapter_gce_password}
+      - GCE_SOCKET_PATH=${GCE_SOCKET_PATH:-/mnt/gce_sockets/gvmd.sock}
+      - GCE_SCAN_CONFIG_ID=${GCE_SCAN_CONFIG_ID:-daba56c8-73ec-11df-a475-002264764cea}
+      - GCE_SCANNER_ID=${GCE_SCANNER_ID:-08b69003-5fc2-4037-a479-93b440211c73}
+      - GCE_PORT_LIST_ID=${GCE_PORT_LIST_ID:-730ef368-57e2-11e1-a90f-406186ea4fc5}
+      - GCE_POLLING_INTERVAL=${GCE_POLLING_INTERVAL:-60}
+      - GCE_MAX_SCAN_TIME=${GCE_MAX_SCAN_TIME:-14400}
+      - GCE_REPORT_FORMAT=${GCE_REPORT_FORMAT:-XML}
     volumes:
-      - ./plugins/gce_scanner:/app
-      - gce_gvmd_socket_vol:/mnt/gce_sockets
+      # Mount GCE socket directory
+      - gce_gvmd_socket_vol:/mnt/gce_sockets:ro
+    depends_on:
+      - rabbitmq
+      - api_gateway
     networks:
       - vapter_network
-      - gce_network
     restart: unless-stopped
-    command: python gce_scanner.py
-
-networks:
-  vapter_network:
-    driver: bridge
-  gce_network:
-    external: true
-    name: gce_default
 
 volumes:
   postgres_data:
   rabbitmq_data:
-  static_volume:
+  backend_media:
+  nmap_temp_results:
+  fingerprint_results:
   gce_gvmd_socket_vol:
     external: true
-    name: gce_gvmd_socket_vol
+    
+networks:
+  vapter_network:
+    driver: bridge
