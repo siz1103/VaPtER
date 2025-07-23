@@ -208,7 +208,7 @@ services:
       - GCE_REPORT_FORMAT=${GCE_REPORT_FORMAT:-XML}
     volumes:
       # Mount GCE socket directory
-      - gvmd_socket_vol:/mnt/gce_sockets:ro
+      - gce_gvmd_socket_vol:/mnt/gce_sockets:ro
     depends_on:
       - rabbitmq
       - api_gateway
@@ -222,7 +222,7 @@ volumes:
   backend_media:
   nmap_temp_results:
   fingerprint_results:
-  gvmd_socket_vol:
+  gce_gvmd_socket_vol:
     external: true
     
 networks:

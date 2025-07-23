@@ -1,101 +1,165 @@
 # plugins/gce_scanner/gce_scanner.py
 
+"""
+GCE (Greenbone Community Edition) Scanner Plugin
+
+This plugin integrates with GCE to perform vulnerability scans on targets
+that have already been scanned with nmap (and optionally fingerprinted).
+"""
+
 import json
 import logging
-import time
-import signal
 import sys
+import time
 import traceback
 from datetime import datetime
-from uuid import UUID
+import xml.etree.ElementTree as ET
 
 import pika
+import pika.exceptions
 import requests
-from gvm.connections import UnixSocketConnection
-from gvm.protocols.gmp import Gmp
-from gvm.transforms import EtreeCheckCommandTransform
-from gvm.errors import GvmError
 import xmltodict
+from gvm.connections import UnixSocketConnection
+from gvm.errors import GvmError
+from gvm.protocols.gmp import Gmp
+from gvm.transforms import EtreeTransform
 
-import config as settings
+from config import settings
 
+# Configure logging
+logging.basicConfig(
+    level=getattr(logging, settings.LOG_LEVEL.upper()),
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[logging.StreamHandler(sys.stdout)]
+)
 logger = logging.getLogger(__name__)
 
 
 class GCEScanner:
-    """GCE (Greenbone Community Edition) Scanner Plugin for VaPtER"""
+    """GCE Scanner implementation"""
     
     def __init__(self):
         self.connection = None
         self.channel = None
-        self.should_stop = False
         self.current_scan_id = None
-        self.gmp_connection = None
-        
-        # Setup signal handlers
-        signal.signal(signal.SIGINT, self._signal_handler)
-        signal.signal(signal.SIGTERM, self._signal_handler)
-    
-    def _signal_handler(self, signum, frame):
-        """Handle shutdown signals gracefully"""
-        logger.info('Received shutdown signal. Stopping scanner...')
-        self.should_stop = True
-        if self.connection and not self.connection.is_closed:
-            self.connection.close()
-        sys.exit(0)
+        self.should_stop = False
+        # Separate connection for publishing updates
+        self.publisher_connection = None
+        self.publisher_channel = None
     
     def connect_rabbitmq(self):
-        """Connect to RabbitMQ"""
+        """Connect to RabbitMQ with proper heartbeat configuration"""
         try:
-            parameters = pika.URLParameters(settings.RABBITMQ_URL)
-            self.connection = pika.BlockingConnection(parameters)
+            # Parse the URL to add heartbeat parameter
+            params = pika.URLParameters(settings.RABBITMQ_URL)
+            
+            # Set heartbeat to 600 seconds (10 minutes) to handle long operations
+            params.heartbeat = 600
+            
+            # Set connection timeout
+            params.connection_attempts = 3
+            params.retry_delay = 2
+            
+            # Establish connection
+            self.connection = pika.BlockingConnection(params)
             self.channel = self.connection.channel()
             
-            # Declare queues
-            self.channel.queue_declare(queue=settings.GCE_SCAN_REQUEST_QUEUE, durable=True)
-            self.channel.queue_declare(queue=settings.SCAN_STATUS_UPDATE_QUEUE, durable=True)
+            # Ensure queue exists - use passive to check if exists
+            try:
+                self.channel.queue_declare(
+                    queue=settings.GCE_SCAN_REQUEST_QUEUE,
+                    durable=True,
+                    passive=True  # Don't try to create, just check if exists
+                )
+            except pika.exceptions.ChannelClosedByBroker:
+                # Queue doesn't exist, create it without extra arguments
+                self.channel = self.connection.channel()
+                self.channel.queue_declare(
+                    queue=settings.GCE_SCAN_REQUEST_QUEUE,
+                    durable=True
+                )
             
-            logger.info("Connected to RabbitMQ successfully")
+            logger.info("Connected to RabbitMQ successfully with heartbeat=600s")
             return True
+            
         except Exception as e:
             logger.error(f"Failed to connect to RabbitMQ: {str(e)}")
             return False
     
+    def connect_publisher(self):
+        """Create a separate connection for publishing status updates"""
+        try:
+            params = pika.URLParameters(settings.RABBITMQ_URL)
+            params.heartbeat = 600
+            
+            self.publisher_connection = pika.BlockingConnection(params)
+            self.publisher_channel = self.publisher_connection.channel()
+            
+            # Ensure status update queue exists
+            try:
+                self.publisher_channel.queue_declare(
+                    queue=settings.SCAN_STATUS_UPDATE_QUEUE,
+                    durable=True,
+                    passive=True
+                )
+            except pika.exceptions.ChannelClosedByBroker:
+                # Queue doesn't exist, create it
+                self.publisher_channel = self.publisher_connection.channel()
+                self.publisher_channel.queue_declare(
+                    queue=settings.SCAN_STATUS_UPDATE_QUEUE,
+                    durable=True
+                )
+            
+            logger.info("Publisher connection established")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to create publisher connection: {str(e)}")
+            return False
+    
+    def ensure_publisher_connection(self):
+        """Ensure publisher connection is active, reconnect if needed"""
+        try:
+            if self.publisher_connection and not self.publisher_connection.is_closed:
+                # Test the connection with a passive declare
+                self.publisher_channel.queue_declare(
+                    queue=settings.SCAN_STATUS_UPDATE_QUEUE,
+                    durable=True,
+                    passive=True
+                )
+                return True
+        except:
+            pass
+        
+        # Connection is dead, reconnect
+        logger.info("Publisher connection lost, reconnecting...")
+        return self.connect_publisher()
+    
     def connect_gce(self):
         """Connect to GCE via Unix socket"""
         try:
+            logger.info(f"Connecting to GCE via socket: {settings.GCE_SOCKET_PATH}")
             connection = UnixSocketConnection(path=settings.GCE_SOCKET_PATH)
-            transform = EtreeCheckCommandTransform()
-            
-            # Create GMP connection
+            transform = EtreeTransform()
             gmp = Gmp(connection, transform=transform)
+            return gmp
             
-            # Test connection by getting version
-            try:
-                # Don't authenticate yet, just get version to test connection
-                logger.info("Testing GCE connection...")
-                return gmp
-            except Exception as e:
-                logger.error(f"Failed to create GMP connection: {e}")
-                raise
-                
-        except FileNotFoundError:
-            logger.error(f"GCE socket not found at {settings.GCE_SOCKET_PATH}")
-            raise
         except Exception as e:
             logger.error(f"Failed to connect to GCE: {str(e)}")
             raise
     
-    def publish_status_update(self, scan_id, status, message=None, error_details=None):
-        """Publish scan status update to RabbitMQ"""
+    def publish_status_update(self, scan_id, status, message='', error_details=None):
+        """Publish scan status update to RabbitMQ with connection handling"""
         try:
-            if not self.connection or self.connection.is_closed:
-                self.connect_rabbitmq()
-
+            # Ensure publisher connection is active
+            if not self.ensure_publisher_connection():
+                logger.error("Failed to establish publisher connection")
+                return
+            
             update_message = {
                 'scan_id': scan_id,
-                'module': 'gce',
                 'status': status,
+                'plugin': 'gce',
                 'timestamp': datetime.utcnow().isoformat()
             }
             
@@ -104,7 +168,7 @@ class GCEScanner:
             if error_details:
                 update_message['error_details'] = error_details
             
-            self.channel.basic_publish(
+            self.publisher_channel.basic_publish(
                 exchange='',
                 routing_key=settings.SCAN_STATUS_UPDATE_QUEUE,
                 body=json.dumps(update_message),
@@ -114,8 +178,10 @@ class GCEScanner:
             )
             
             logger.info(f"Published status update for scan {scan_id}: {status}")
+            
         except Exception as e:
             logger.error(f"Failed to publish status update: {str(e)}")
+            # Don't raise exception to avoid interrupting the main flow
     
     def get_scan_params(self, scan_type_id):
         """Get scan parameters from API"""
@@ -210,7 +276,24 @@ class GCEScanner:
                     return None
                 
                 status = task.find('status').text
-                progress = int(task.find('progress').text)
+                progress_element = task.find('progress')
+                
+                # Handle progress value correctly
+                if progress_element is not None and progress_element.text:
+                    try:
+                        progress = int(progress_element.text)
+                        # Ensure progress is within valid range
+                        progress = max(0, min(100, progress))
+                    except ValueError:
+                        if status in ['Done']:
+                            progress = 100
+                        else:
+                            progress = 0
+                else:
+                    if status in ['Done']:
+                        progress = 100
+                    else:
+                        progress = 0
                 
                 # Log progress if changed
                 if progress != last_progress:
@@ -252,13 +335,11 @@ class GCEScanner:
             if settings.GCE_REPORT_FORMAT == 'XML':
                 response = gmp.get_report(report_id, details=True)
                 # Convert etree to string
-                import xml.etree.ElementTree as ET
                 report_xml = ET.tostring(response, encoding='unicode')
                 return report_xml
             else:
                 # For JSON, we need to convert XML to JSON
                 response = gmp.get_report(report_id, details=True)
-                import xml.etree.ElementTree as ET
                 report_xml = ET.tostring(response, encoding='unicode')
                 report_dict = xmltodict.parse(report_xml)
                 return json.dumps(report_dict, indent=2)
@@ -360,16 +441,13 @@ class GCEScanner:
                     # Send results to API
                     if self.send_results_to_api(scan_id, results_data):
                         self.publish_status_update(scan_id, 'completed', 'GCE scan completed successfully')
-                        if channel.is_open:
-                            channel.basic_ack(delivery_tag=method.delivery_tag)
+                        channel.basic_ack(delivery_tag=method.delivery_tag)
                     else:
                         self.publish_status_update(scan_id, 'error', error_details='Failed to send results to API')
-                        if channel.is_open:
-                            channel.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
+                        channel.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
                 else:
                     self.publish_status_update(scan_id, 'error', error_details='Scan failed or timed out')
-                    if channel.is_open:
-                        channel.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
+                    channel.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
             
             self.current_scan_id = None
             
@@ -389,36 +467,85 @@ class GCEScanner:
     def start_consuming(self):
         """Start consuming messages from RabbitMQ"""
         try:
+            # Connect to RabbitMQ
             if not self.connect_rabbitmq():
+                return False
+            
+            # Connect publisher
+            if not self.connect_publisher():
                 return False
             
             # Set QoS
             self.channel.basic_qos(prefetch_count=1)
             
-            # Setup consumer
+            # Setup consumer with proper error handling
+            def safe_callback(channel, method, properties, body):
+                try:
+                    self.process_scan_request(channel, method, properties, body)
+                except Exception as e:
+                    logger.error(f"Unhandled exception in callback: {str(e)}")
+                    channel.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
+            
+            # Start consuming
             self.channel.basic_consume(
                 queue=settings.GCE_SCAN_REQUEST_QUEUE,
-                on_message_callback=self.process_scan_request,
+                on_message_callback=safe_callback,
                 auto_ack=False
             )
             
             logger.info(f"GCE Scanner started, waiting for messages on {settings.GCE_SCAN_REQUEST_QUEUE}")
             
-            # Start consuming
-            self.channel.start_consuming()
-            
-        except KeyboardInterrupt:
-            logger.info("Interrupted by user")
-            self.channel.stop_consuming()
+            # Start consuming with periodic connection check
+            while True:
+                try:
+                    self.channel.start_consuming()
+                except pika.exceptions.ConnectionClosed:
+                    logger.warning("RabbitMQ connection lost, reconnecting...")
+                    time.sleep(5)
+                    if not self.connect_rabbitmq():
+                        logger.error("Failed to reconnect to RabbitMQ")
+                        break
+                except KeyboardInterrupt:
+                    logger.info("Interrupted by user")
+                    break
+                except Exception as e:
+                    logger.error(f"Unexpected error: {str(e)}")
+                    time.sleep(5)
             
         except Exception as e:
             logger.error(f"Error in consumer: {str(e)}")
             return False
             
         finally:
+            self.cleanup_connections()
+            logger.info("GCE Scanner stopped")
+    
+    def cleanup_connections(self):
+        """Clean up all connections"""
+        try:
+            if self.channel and not self.channel.is_closed:
+                self.channel.stop_consuming()
+                self.channel.close()
+        except:
+            pass
+        
+        try:
             if self.connection and not self.connection.is_closed:
                 self.connection.close()
-            logger.info("GCE Scanner stopped")
+        except:
+            pass
+        
+        try:
+            if self.publisher_channel and not self.publisher_channel.is_closed:
+                self.publisher_channel.close()
+        except:
+            pass
+        
+        try:
+            if self.publisher_connection and not self.publisher_connection.is_closed:
+                self.publisher_connection.close()
+        except:
+            pass
 
 
 def main():
