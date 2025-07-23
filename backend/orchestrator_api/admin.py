@@ -5,9 +5,11 @@ from django.utils.html import format_html
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 import json
-
-from .models import Customer, PortList, ScanType, Target, Scan, ScanDetail, FingerprintDetail
-
+#from django.utils.html import format_html, mark_safe
+from .models import (
+    Customer, PortList, ScanType, Target, Scan, ScanDetail, 
+    FingerprintDetail, GceResult
+)
 
 @admin.register(Customer)
 class CustomerAdmin(admin.ModelAdmin):
@@ -475,6 +477,114 @@ class FingerprintDetailAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         """Optimize queryset with select_related"""
         return super().get_queryset(request).select_related('scan', 'target')
+
+@admin.register(GceResult)
+class GceResultAdmin(admin.ModelAdmin):
+    """Admin configuration for GceResult model"""
+    
+    list_display = ['id', 'scan_link', 'target_link', 'gce_status', 'progress_display', 'vulnerabilities_summary', 'scan_duration', 'created_at']
+    list_filter = ['gce_scan_status', 'report_format', 'created_at']
+    search_fields = ['scan__id', 'target__name', 'target__address', 'gce_task_id', 'gce_report_id']
+    readonly_fields = [
+        'created_at', 'updated_at', 'deleted_at', 
+        'gce_task_id', 'gce_report_id', 'gce_target_id',
+        'report_preview', 'vulnerability_count_formatted', 'scan_duration'
+    ]
+    ordering = ['-created_at']
+    
+    fieldsets = (
+        ('Scan Information', {
+            'fields': ('scan', 'target')
+        }),
+        ('GCE Identifiers', {
+            'fields': ('gce_task_id', 'gce_report_id', 'gce_target_id'),
+            'classes': ('collapse',)
+        }),
+        ('Scan Status', {
+            'fields': ('gce_scan_status', 'gce_scan_progress', 'gce_scan_started_at', 'gce_scan_completed_at', 'scan_duration')
+        }),
+        ('Results', {
+            'fields': ('report_format', 'vulnerability_count_formatted', 'report_preview')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at', 'deleted_at'),
+            'classes': ('collapse',)
+        })
+    )
+    
+    def scan_link(self, obj):
+        """Display scan as link"""
+        url = reverse('admin:orchestrator_api_scan_change', args=[obj.scan.id])
+        return format_html('<a href="{}">{}</a>', url, obj.scan.id)
+    scan_link.short_description = 'Scan'
+    
+    def target_link(self, obj):
+        """Display target as link"""
+        url = reverse('admin:orchestrator_api_target_change', args=[obj.target.id])
+        return format_html('<a href="{}">{}</a>', url, f"{obj.target.name} ({obj.target.address})")
+    target_link.short_description = 'Target'
+    
+    def gce_status(self, obj):
+        """Display GCE scan status with color"""
+        status = obj.gce_scan_status or 'Unknown'
+        colors = {
+            'Done': 'green',
+            'Running': 'orange',
+            'Stopped': 'red',
+            'Interrupted': 'red',
+            'Unknown': 'gray'
+        }
+        color = colors.get(status, 'black')
+        return format_html('<span style="color: {};">{}</span>', color, status)
+    gce_status.short_description = 'Status'
+    
+    def progress_display(self, obj):
+        """Display scan progress"""
+        return f"{obj.gce_scan_progress}%"
+    progress_display.short_description = 'Progress'
+    
+    def vulnerabilities_summary(self, obj):
+        """Display vulnerability count summary"""
+        if obj.vulnerability_count:
+            counts = obj.vulnerability_count
+            parts = []
+            if counts.get('critical', 0) > 0:
+                parts.append(format_html('<span style="color: darkred;">C:{}</span>', counts['critical']))
+            if counts.get('high', 0) > 0:
+                parts.append(format_html('<span style="color: red;">H:{}</span>', counts['high']))
+            if counts.get('medium', 0) > 0:
+                parts.append(format_html('<span style="color: orange;">M:{}</span>', counts['medium']))
+            if counts.get('low', 0) > 0:
+                parts.append(format_html('<span style="color: yellow;">L:{}</span>', counts['low']))
+            if counts.get('log', 0) > 0:
+                parts.append(format_html('<span style="color: gray;">I:{}</span>', counts['log']))
+            
+            return format_html(' / '.join(parts)) if parts else '-'
+        return '-'
+    vulnerabilities_summary.short_description = 'Vulnerabilities'
+    
+    def scan_duration(self, obj):
+        """Calculate and display scan duration"""
+        if obj.gce_scan_started_at and obj.gce_scan_completed_at:
+            duration = obj.gce_scan_completed_at - obj.gce_scan_started_at
+            return str(duration).split('.')[0]  # Remove microseconds
+        return '-'
+    scan_duration.short_description = 'Duration'
+    
+    def vulnerability_count_formatted(self, obj):
+        """Display formatted vulnerability count"""
+        if obj.vulnerability_count:
+            return mark_safe(f'<pre>{json.dumps(obj.vulnerability_count, indent=2)}</pre>')
+        return '-'
+    vulnerability_count_formatted.short_description = 'Vulnerability Count Details'
+    
+    def report_preview(self, obj):
+        """Display a preview of the report"""
+        if obj.full_report:
+            preview = obj.full_report[:1000] + '...' if len(obj.full_report) > 1000 else obj.full_report
+            return mark_safe(f'<pre style="white-space: pre-wrap; max-height: 300px; overflow-y: auto;">{preview}</pre>')
+        return '-'
+    report_preview.short_description = 'Report Preview (first 1000 chars)'
     
 # Customize admin site
 admin.site.site_header = 'VaPtER Administration'

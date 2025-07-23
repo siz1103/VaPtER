@@ -3,7 +3,10 @@ from django.db import models
 from django.core.validators import RegexValidator
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.exceptions import ValidationError
+from django.contrib.auth.models import User
+from django.utils import timezone
 import ipaddress
+
 
 
 class TimestampMixin(models.Model):
@@ -421,3 +424,89 @@ class FingerprintDetail(TimestampMixin, SoftDeleteMixin):
     
     def __str__(self):
         return f"Fingerprint - {self.target.address}:{self.port}/{self.protocol} - {self.service_name or 'Unknown'}"
+    
+class GceResult(TimestampMixin, SoftDeleteMixin):
+    """Store GCE (Greenbone) scan results"""
+    
+    id = models.AutoField(primary_key=True)
+    scan = models.ForeignKey(
+        Scan,
+        on_delete=models.CASCADE,
+        related_name='gce_results'
+    )
+    target = models.ForeignKey(
+        Target,
+        on_delete=models.CASCADE,
+        related_name='gce_results'
+    )
+    
+    # GCE specific fields
+    gce_task_id = models.UUIDField(
+        null=True,
+        blank=True,
+        help_text="Task ID in Greenbone"
+    )
+    gce_report_id = models.UUIDField(
+        null=True,
+        blank=True,
+        help_text="Report ID in Greenbone"
+    )
+    gce_target_id = models.UUIDField(
+        null=True,
+        blank=True,
+        help_text="Target ID in Greenbone"
+    )
+    
+    # Scan status
+    gce_scan_status = models.CharField(
+        max_length=50,
+        null=True,
+        blank=True,
+        help_text="Status from GCE (e.g., Running, Done, Stopped)"
+    )
+    gce_scan_progress = models.IntegerField(
+        default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        help_text="Scan progress percentage"
+    )
+    
+    # Results
+    report_format = models.CharField(
+        max_length=10,
+        default='XML',
+        choices=[('XML', 'XML'), ('JSON', 'JSON')],
+        help_text="Format of the stored report"
+    )
+    full_report = models.TextField(
+        null=True,
+        blank=True,
+        help_text="Full XML/JSON report from GCE"
+    )
+    
+    # Summary fields (to be populated when parsing is implemented)
+    vulnerability_count = models.JSONField(
+        null=True,
+        blank=True,
+        default=dict,
+        help_text="Count by severity: {critical: 0, high: 0, medium: 0, low: 0, log: 0}"
+    )
+    
+    # Timing
+    gce_scan_started_at = models.DateTimeField(null=True, blank=True)
+    gce_scan_completed_at = models.DateTimeField(null=True, blank=True)
+    
+    objects = SoftDeleteManager()
+    all_objects = models.Manager()
+    
+    class Meta:
+        db_table = 'gce_result'
+        ordering = ['scan', 'created_at']
+        verbose_name = 'GCE Result'
+        verbose_name_plural = 'GCE Results'
+        indexes = [
+            models.Index(fields=['scan', 'gce_task_id']),
+            models.Index(fields=['target']),
+        ]
+    
+    def __str__(self):
+        return f"GCE Result - {self.target.address} - Task: {self.gce_task_id}"
