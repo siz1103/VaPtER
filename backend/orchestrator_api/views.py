@@ -390,6 +390,82 @@ class ScanViewSet(viewsets.ModelViewSet):
             'recent_scans': recent_scans_data
         })
 
+    @action(detail=True, methods=['patch'], url_path='gce-progress')
+    def update_gce_progress(self, request, pk=None):
+        """Update GCE scan progress"""
+        scan = self.get_object()
+        serializer = GceProgressSerializer(data=request.data)
+
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        # Get or create GceResult
+        gce_result, created = GceResult.objects.get_or_create(
+            scan=scan,
+            target=scan.target,
+            defaults={
+                'gce_task_id': serializer.validated_data['gce_task_id'],
+                'gce_scan_status': serializer.validated_data['gce_scan_status'],
+                'gce_scan_progress': serializer.validated_data['gce_scan_progress']
+            }
+        )
+
+        if not created:
+            # Update existing result
+            gce_result.gce_scan_status = serializer.validated_data['gce_scan_status']
+            gce_result.gce_scan_progress = serializer.validated_data['gce_scan_progress']
+            gce_result.save()
+
+        # Update scan detail if exists
+        if hasattr(scan, 'details'):
+            scan_detail = scan.details
+            if serializer.validated_data['gce_scan_status'] == 'Running' and not scan_detail.gce_started_at:
+                scan_detail.gce_started_at = timezone.now()
+                scan_detail.save()
+
+        return Response({'status': 'progress updated'}, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'], url_path='gce-results')
+    def create_gce_results(self, request, pk=None):
+        """Create GCE scan results"""
+        scan = self.get_object()
+        serializer = GceResultCreateSerializer(data=request.data)
+
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        # Get or update GceResult
+        gce_result, created = GceResult.objects.update_or_create(
+            scan=scan,
+            target=scan.target,
+            gce_task_id=serializer.validated_data['gce_task_id'],
+            defaults={
+                'gce_report_id': serializer.validated_data['gce_report_id'],
+                'gce_target_id': serializer.validated_data['gce_target_id'],
+                'report_format': serializer.validated_data['report_format'],
+                'full_report': serializer.validated_data['full_report'],
+                'gce_scan_started_at': serializer.validated_data['gce_scan_started_at'],
+                'gce_scan_completed_at': serializer.validated_data['gce_scan_completed_at'],
+                'gce_scan_status': 'Done',
+                'gce_scan_progress': 100,
+                'vulnerability_count': serializer.validated_data.get('vulnerability_count', {})
+            }
+        )
+
+        # Update scan status
+        scan.parsed_gce_results = True
+        scan.save()
+
+        # Update scan detail
+        if hasattr(scan, 'details'):
+            scan_detail = scan.details
+            scan_detail.gce_completed_at = timezone.now()
+            scan_detail.save()
+
+        result_serializer = GceResultSerializer(gce_result)
+        status_code = status.HTTP_201_CREATED if created else status.HTTP_200_OK
+        return Response(result_serializer.data, status=status_code)
+
 class ScanDetailViewSet(viewsets.ModelViewSet):
     """ViewSet for ScanDetail CRUD operations"""
     
@@ -517,84 +593,3 @@ class GceResultViewSet(viewsets.ModelViewSet):
     search_fields = ['gce_task_id', 'gce_report_id']
     ordering_fields = ['created_at', 'gce_scan_completed_at']
     ordering = ['-created_at']
-#          # Update scan status based on parsed results
-#        scan.parsed_finger_results = True
-#        scan.save()
-#        
-#        return Response(serializer.data, status=status.HTTP_201_CREATED)
-    
-    @action(detail=True, methods=['patch'], url_path='gce-progress')
-    def update_gce_progress(self, request, pk=None):
-        """Update GCE scan progress"""
-        scan = self.get_object()
-        serializer = GceProgressSerializer(data=request.data)
-        
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        
-        # Get or create GceResult
-        gce_result, created = GceResult.objects.get_or_create(
-            scan=scan,
-            target=scan.target,
-            defaults={
-                'gce_task_id': serializer.validated_data['gce_task_id'],
-                'gce_scan_status': serializer.validated_data['gce_scan_status'],
-                'gce_scan_progress': serializer.validated_data['gce_scan_progress']
-            }
-        )
-        
-        if not created:
-            # Update existing result
-            gce_result.gce_scan_status = serializer.validated_data['gce_scan_status']
-            gce_result.gce_scan_progress = serializer.validated_data['gce_scan_progress']
-            gce_result.save()
-        
-        # Update scan detail if exists
-        if hasattr(scan, 'details'):
-            scan_detail = scan.details
-            if serializer.validated_data['gce_scan_status'] == 'Running' and not scan_detail.gce_started_at:
-                scan_detail.gce_started_at = timezone.now()
-                scan_detail.save()
-        
-        return Response({'status': 'progress updated'}, status=status.HTTP_200_OK)
-    
-    @action(detail=True, methods=['post'], url_path='gce-results')
-    def create_gce_results(self, request, pk=None):
-        """Create GCE scan results"""
-        scan = self.get_object()
-        serializer = GceResultCreateSerializer(data=request.data)
-        
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        
-        # Get or update GceResult
-        gce_result, created = GceResult.objects.update_or_create(
-            scan=scan,
-            target=scan.target,
-            gce_task_id=serializer.validated_data['gce_task_id'],
-            defaults={
-                'gce_report_id': serializer.validated_data['gce_report_id'],
-                'gce_target_id': serializer.validated_data['gce_target_id'],
-                'report_format': serializer.validated_data['report_format'],
-                'full_report': serializer.validated_data['full_report'],
-                'gce_scan_started_at': serializer.validated_data['gce_scan_started_at'],
-                'gce_scan_completed_at': serializer.validated_data['gce_scan_completed_at'],
-                'gce_scan_status': 'Done',
-                'gce_scan_progress': 100,
-                'vulnerability_count': serializer.validated_data.get('vulnerability_count', {})
-            }
-        )
-        
-        # Update scan status
-        scan.parsed_gce_results = True
-        scan.save()
-        
-        # Update scan detail
-        if hasattr(scan, 'details'):
-            scan_detail = scan.details
-            scan_detail.gce_completed_at = timezone.now()
-            scan_detail.save()
-        
-        result_serializer = GceResultSerializer(gce_result)
-        status_code = status.HTTP_201_CREATED if created else status.HTTP_200_OK
-        return Response(result_serializer.data, status=status_code)
