@@ -16,6 +16,7 @@ from datetime import datetime
 import xml.etree.ElementTree as ET
 
 import pika
+import pika.exceptions
 import requests
 import xmltodict
 from gvm.connections import UnixSocketConnection
@@ -63,15 +64,20 @@ class GCEScanner:
             self.connection = pika.BlockingConnection(params)
             self.channel = self.connection.channel()
             
-            # Ensure queue exists
-            self.channel.queue_declare(
-                queue=settings.GCE_SCAN_REQUEST_QUEUE,
-                durable=True,
-                arguments={
-                    'x-message-ttl': 86400000,  # 24 hours TTL
-                    'x-max-length': 10000
-                }
-            )
+            # Ensure queue exists - use passive to check if exists
+            try:
+                self.channel.queue_declare(
+                    queue=settings.GCE_SCAN_REQUEST_QUEUE,
+                    durable=True,
+                    passive=True  # Don't try to create, just check if exists
+                )
+            except pika.exceptions.ChannelClosedByBroker:
+                # Queue doesn't exist, create it without extra arguments
+                self.channel = self.connection.channel()
+                self.channel.queue_declare(
+                    queue=settings.GCE_SCAN_REQUEST_QUEUE,
+                    durable=True
+                )
             
             logger.info("Connected to RabbitMQ successfully with heartbeat=600s")
             return True
@@ -90,14 +96,19 @@ class GCEScanner:
             self.publisher_channel = self.publisher_connection.channel()
             
             # Ensure status update queue exists
-            self.publisher_channel.queue_declare(
-                queue=settings.SCAN_STATUS_UPDATE_QUEUE,
-                durable=True,
-                arguments={
-                    'x-message-ttl': 86400000,
-                    'x-max-length': 10000
-                }
-            )
+            try:
+                self.publisher_channel.queue_declare(
+                    queue=settings.SCAN_STATUS_UPDATE_QUEUE,
+                    durable=True,
+                    passive=True
+                )
+            except pika.exceptions.ChannelClosedByBroker:
+                # Queue doesn't exist, create it
+                self.publisher_channel = self.publisher_connection.channel()
+                self.publisher_channel.queue_declare(
+                    queue=settings.SCAN_STATUS_UPDATE_QUEUE,
+                    durable=True
+                )
             
             logger.info("Publisher connection established")
             return True
@@ -110,7 +121,7 @@ class GCEScanner:
         """Ensure publisher connection is active, reconnect if needed"""
         try:
             if self.publisher_connection and not self.publisher_connection.is_closed:
-                # Test the connection by declaring the queue
+                # Test the connection with a passive declare
                 self.publisher_channel.queue_declare(
                     queue=settings.SCAN_STATUS_UPDATE_QUEUE,
                     durable=True,
