@@ -118,7 +118,7 @@ services:
     depends_on:
       - backend
     ports:
-      - "5000:5000"
+      - "8080:8080"
     volumes:
       - ./api_gateway:/app
     networks:
@@ -129,7 +129,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     environment:
-      - VITE_API_URL=http://localhost:5000
+      - VITE_API_URL=http://localhost:8080
     ports:
       - "3000:3000"
     volumes:
@@ -144,7 +144,7 @@ services:
       context: ./plugins/nmap_scanner
       dockerfile: Dockerfile
     environment:
-      - INTERNAL_API_GATEWAY_URL=http://api_gateway:5000
+      - INTERNAL_API_GATEWAY_URL=http://api_gateway:8080
       - RABBITMQ_HOST=rabbitmq
       - RABBITMQ_PORT=5672
       - RABBITMQ_USER=vapter
@@ -166,10 +166,10 @@ services:
 
   gce_scanner:
     build:
-      context: ./gce/plugins/gce_scanner
+      context: ./plugins/gce_scanner
       dockerfile: Dockerfile
     environment:
-      - INTERNAL_API_GATEWAY_URL=http://api_gateway:5000
+      - INTERNAL_API_GATEWAY_URL=http://api_gateway:8080
       - RABBITMQ_HOST=rabbitmq
       - RABBITMQ_PORT=5672
       - RABBITMQ_USER=vapter
@@ -188,7 +188,7 @@ services:
       api_gateway:
         condition: service_started
     volumes:
-      - ./gce/plugins/gce_scanner:/app
+      - ./plugins/gce_scanner:/app
       - gce_gvmd_socket_vol:/mnt/gce_sockets
     networks:
       - vapter_network
