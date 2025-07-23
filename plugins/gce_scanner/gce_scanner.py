@@ -285,9 +285,15 @@ class GCEScanner:
                         # Ensure progress is within valid range
                         progress = max(0, min(100, progress))
                     except ValueError:
-                        progress = 0
+                        if status in ['Done']:
+                            progress = 100
+                        else:
+                            progress = 0
                 else:
-                    progress = 0
+                    if status in ['Done']:
+                        progress = 100
+                    else:
+                        progress = 0
                 
                 # Log progress if changed
                 if progress != last_progress:
