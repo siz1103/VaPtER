@@ -89,6 +89,9 @@ class GCEScanner:
     def publish_status_update(self, scan_id, status, message=None, error_details=None):
         """Publish scan status update to RabbitMQ"""
         try:
+            if not self.connection or self.connection.is_closed:
+                self.connect_rabbitmq()
+
             update_message = {
                 'scan_id': scan_id,
                 'module': 'gce',
@@ -269,7 +272,7 @@ class GCEScanner:
         try:
             url = f"{settings.INTERNAL_API_GATEWAY_URL}/api/orchestrator/scans/{scan_id}/gce-progress/"
             data = {
-                'gce_task_id': task_id,
+                'gce_task_id': str(task_id),
                 'gce_scan_progress': progress,
                 'gce_scan_status': status
             }
@@ -278,7 +281,7 @@ class GCEScanner:
             response.raise_for_status()
             
         except Exception as e:
-            logger.error(f"Failed to update scan progress: {str(e)}")
+            logger.error(f"Failed to update scan progress: {e}")
     
     def send_results_to_api(self, scan_id, results_data):
         """Send scan results to API"""
@@ -341,12 +344,13 @@ class GCEScanner:
                 if report_id:
                     # Get full report
                     report_content = self.get_scan_report(gmp, report_id)
+                    logger.info(f"GCE Report XML: {report_content}")
                     
                     # Prepare results
                     results_data = {
-                        'gce_task_id': gce_task_id,
-                        'gce_report_id': report_id,
-                        'gce_target_id': gce_target_id,
+                        'gce_task_id': str(gce_task_id),
+                        'gce_report_id': str(report_id),
+                        'gce_target_id': str(gce_target_id),
                         'report_format': settings.GCE_REPORT_FORMAT,
                         'full_report': report_content,
                         'gce_scan_started_at': start_time.isoformat(),
@@ -356,13 +360,16 @@ class GCEScanner:
                     # Send results to API
                     if self.send_results_to_api(scan_id, results_data):
                         self.publish_status_update(scan_id, 'completed', 'GCE scan completed successfully')
-                        channel.basic_ack(delivery_tag=method.delivery_tag)
+                        if channel.is_open:
+                            channel.basic_ack(delivery_tag=method.delivery_tag)
                     else:
                         self.publish_status_update(scan_id, 'error', error_details='Failed to send results to API')
-                        channel.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
+                        if channel.is_open:
+                            channel.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
                 else:
                     self.publish_status_update(scan_id, 'error', error_details='Scan failed or timed out')
-                    channel.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
+                    if channel.is_open:
+                        channel.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
             
             self.current_scan_id = None
             
