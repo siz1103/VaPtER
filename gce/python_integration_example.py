@@ -27,18 +27,13 @@ PORT_LIST_ALL_TCP_NMAP_UDP = '730ef368-57e2-11e1-a90f-406186ea4fc5'
 
 
 def get_gmp_connection(socket_path):
-    """Get GMP connection with automatic version detection"""
+    """Get GMP connection"""
     connection = UnixSocketConnection(path=socket_path)
     transform = EtreeCheckCommandTransform()
     
-    try:
-        # Try GMP 22.4+
-        from gvm.protocols.gmpv224 import Gmp as Gmp224
-        return Gmp224(connection, transform=transform)
-    except (ImportError, GvmError):
-        # Fallback to standard GMP
-        from gvm.protocols.gmp import Gmp
-        return Gmp(connection, transform=transform)
+    # Create standard GMP connection
+    from gvm.protocols.gmp import Gmp
+    return Gmp(connection, transform=transform)
 
 
 class GCEIntegration:

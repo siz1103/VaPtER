@@ -6,14 +6,25 @@ Il plugin GCE Scanner per VaPtER fornisce integrazione con Greenbone Community E
 
 ## ⚠️ Nota Importante sulla Compatibilità
 
-Il plugin supporta automaticamente diverse versioni del protocollo GMP (Greenbone Management Protocol). Se riscontri errori di versione GMP non supportata, esegui:
+Il plugin potrebbe riscontrare problemi di compatibilità con diverse versioni di GMP (Greenbone Management Protocol). 
+
+### Fix Rapido per Errori di Versione
+
+Se riscontri l'errore `Remote manager daemon uses an unsupported version of GMP`:
 
 ```bash
-chmod +x update-gce-scanner.sh
-./update-gce-scanner.sh
-```
+# Opzione 1: Script di fix automatico
+chmod +x fix-gmp-version.sh
+./fix-gmp-version.sh
 
-Questo aggiornerà il plugin per supportare GMP 22.x e versioni successive.
+# Opzione 2: Fix manuale
+docker-compose exec gce_scanner pip uninstall -y python-gvm
+docker-compose exec gce_scanner pip install git+https://github.com/greenbone/python-gvm.git@main
+docker-compose restart gce_scanner
+
+# Opzione 3: Debug per capire il problema
+docker-compose exec gce_scanner python debug_gmp.py
+```
 
 ## Funzionalità
 

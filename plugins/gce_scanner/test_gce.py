@@ -20,23 +20,15 @@ GCE_PASSWORD = os.environ.get('GCE_PASSWORD', 'vapter_gce_password')
 
 
 def get_gmp_connection():
-    """Get GMP connection with automatic version detection"""
+    """Get GMP connection"""
     connection = UnixSocketConnection(path=GCE_SOCKET_PATH)
     transform = EtreeCheckCommandTransform()
     
-    # Try different GMP protocol versions
-    try:
-        # Try GMP 22.4+
-        from gvm.protocols.gmpv224 import Gmp as Gmp224
-        gmp = Gmp224(connection, transform=transform)
-        logger.info("Using GMP v22.4+ protocol")
-        return gmp
-    except (ImportError, GvmError):
-        # Fallback to standard GMP
-        from gvm.protocols.gmp import Gmp
-        gmp = Gmp(connection, transform=transform)
-        logger.info("Using standard GMP protocol")
-        return gmp
+    # Create standard GMP connection
+    from gvm.protocols.gmp import Gmp
+    gmp = Gmp(connection, transform=transform)
+    logger.info("Using GMP protocol")
+    return gmp
 
 
 def test_gce_connection():

@@ -10,29 +10,58 @@
 
 **Cause**: The python-gvm library version doesn't support the GMP protocol version used by your GCE installation.
 
-**Solution**: The plugin has been updated to automatically detect and use the correct GMP protocol version. If you still encounter this issue:
+**Solutions**:
 
-1. **Rebuild the container** to get the updated dependencies:
+1. **Run the debug script** to understand the issue:
    ```bash
-   docker-compose build gce_scanner
-   docker-compose up -d gce_scanner
+   docker-compose exec gce_scanner python debug_gmp.py
    ```
 
-2. **Verify the connection**:
+2. **Rebuild the container**:
    ```bash
-   docker-compose exec gce_scanner python test_gce.py
+   chmod +x update-gce-scanner.sh
+   ./update-gce-scanner.sh
    ```
 
-3. **Check GMP version**:
+3. **Try alternative requirements** (uses latest python-gvm from GitHub):
+   ```bash
+   docker-compose exec gce_scanner pip install -r requirements-alt.txt
+   docker-compose restart gce_scanner
+   ```
+
+4. **Manual fix** - Install specific python-gvm version:
+   ```bash
+   # For GMP 22.x
+   docker-compose exec gce_scanner pip uninstall -y python-gvm
+   docker-compose exec gce_scanner pip install git+https://github.com/greenbone/python-gvm.git@main
+   docker-compose restart gce_scanner
+   ```
+
+5. **Check GMP protocol version**:
    ```bash
    docker-compose exec gce_scanner python -c "
+   from gvm.connections import UnixSocketConnection
+   from gvm.protocols.gmp import Gmp
+   from gvm.transforms import EtreeCheckCommandTransform
    import os
-   os.environ['GCE_USERNAME'] = 'vapter_api'
-   os.environ['GCE_PASSWORD'] = 'your_password'
-   from test_gce import test_gce_connection
-   test_gce_connection()
+   
+   connection = UnixSocketConnection('/mnt/gce_sockets/gvmd.sock')
+   gmp = Gmp(connection, EtreeCheckCommandTransform())
+   
+   with gmp:
+       gmp.authenticate(os.environ['GCE_USERNAME'], os.environ['GCE_PASSWORD'])
+       version = gmp.get_version()
+       print(version.find('version').text)
    "
    ```
+
+### 2. ModuleNotFoundError for gmpv224
+
+**Error**: `ModuleNotFoundError: No module named 'gvm.protocols.gmpv224'`
+
+**Cause**: The specific protocol version module doesn't exist in python-gvm.
+
+**Solution**: The code has been updated to use the standard GMP protocol which should handle version negotiation automatically.
 
 ### 2. Socket Not Found
 

@@ -1,0 +1,16 @@
+# plugins/gce_scanner/requirements-alt.txt
+# Alternative requirements to test GMP 22.x compatibility
+
+# Core dependencies
+pika==1.3.2
+requests==2.31.0
+
+# Try with latest python-gvm from GitHub
+git+https://github.com/greenbone/python-gvm.git@main#egg=python-gvm
+
+# XML processing
+lxml==5.1.0
+xmltodict==0.13.0
+
+# Utilities
+python-dateutil==2.8.2

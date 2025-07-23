@@ -1,0 +1,16 @@
+# plugins/gce_scanner/requirements-minimal.txt
+# Minimal requirements for testing
+
+# Core dependencies
+pika==1.3.2
+requests==2.31.0
+
+# Latest python-gvm
+python-gvm
+
+# XML processing
+lxml
+xmltodict
+
+# Utilities
+python-dateutil
