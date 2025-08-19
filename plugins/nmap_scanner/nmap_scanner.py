@@ -188,6 +188,10 @@ class NmapScanner:
         self.api_gateway_url = os.environ.get('INTERNAL_API_GATEWAY_URL', 'http://api_gateway:8080')
         self.rabbitmq_url = os.environ.get('RABBITMQ_URL', 'amqp://vapter:vapter123@rabbitmq:5672/')
         
+        # Log configuration for debugging
+        logger.info(f"Initializing NmapScanner with API Gateway: {self.api_gateway_url}")
+        logger.info(f"RabbitMQ URL configured: {self.rabbitmq_url.replace(self.rabbitmq_url.split('@')[0].split('//')[1], '***:***')}")
+        
         # Initialize connections using the full URL with credentials
         self.consumer_connection = RabbitMQConnection(
             self.rabbitmq_url,

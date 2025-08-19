@@ -1,3 +1,4 @@
+# docker-compose.yml
 version: '3.8'
 
 services:
@@ -26,17 +27,9 @@ services:
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-vapter123}
       # Configurazione heartbeat e timeout
       RABBITMQ_HEARTBEAT: 60
-      RABBITMQ_CHANNEL_MAX: 200
-      RABBITMQ_FRAME_MAX: 131072
-      # Configurazione per connessioni lunghe
-      RABBITMQ_TCP_KEEPALIVE: 'true'
-      RABBITMQ_TCP_KEEPALIVE_IDLE: 60
-      RABBITMQ_TCP_KEEPALIVE_INTVL: 10
-      RABBITMQ_TCP_KEEPALIVE_CNT: 10
+      RABBITMQ_CONSUMER_TIMEOUT: 0
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
-      # Configurazione avanzata RabbitMQ
-      - ./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
     ports:
       - "5672:5672"      # AMQP port
       - "15672:15672"    # Management UI
@@ -126,7 +119,7 @@ services:
       - vapter_network
     restart: unless-stopped
 
-# Nmap Scanner Module
+  # Nmap Scanner Module
   nmap_scanner:
     build:
       context: ./plugins/nmap_scanner
@@ -151,12 +144,9 @@ services:
     networks:
       - vapter_network
     restart: unless-stopped
-    # Add security options for scanning
     cap_add:
       - NET_ADMIN
       - NET_RAW
-    # Network mode for scanning (optional - use host mode for better network access)
-    # network_mode: host  # Uncomment if needed for advanced scanning
 
   # React Frontend
   frontend:
@@ -178,6 +168,7 @@ services:
       - vapter_network
     restart: unless-stopped
 
+  # Fingerprint Scanner Module
   fingerprint_scanner:
     build: ./plugins/fingerprint_scanner
     container_name: vapter_fingerprint_scanner
@@ -185,7 +176,7 @@ services:
     environment:
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - INTERNAL_API_GATEWAY_URL=http://api_gateway:8080
-      - RABBITMQ_URL=amqp://vapter:vapter123@rabbitmq:5672/
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-vapter}:${RABBITMQ_PASSWORD:-vapter123}@rabbitmq:5672/
       - RABBITMQ_FINGERPRINT_SCAN_REQUEST_QUEUE=fingerprint_scan_requests
       - RABBITMQ_SCAN_STATUS_UPDATE_QUEUE=scan_status_updates
       - FINGERPRINT_TIMEOUT_PER_PORT=60
@@ -198,10 +189,10 @@ services:
     volumes:
       - fingerprint_results:/tmp/fingerprint_results
     cap_add:
-    - NET_RAW
-    - NET_ADMIN # Spesso necessario per operazioni di rete più ampie, includilo per sicurezza.
+      - NET_RAW
+      - NET_ADMIN
 
-# GCE Scanner Module
+  # GCE Scanner Module
   gce_scanner:
     build:
       context: ./plugins/gce_scanner
@@ -223,8 +214,9 @@ services:
       - GCE_MAX_SCAN_TIME=${GCE_MAX_SCAN_TIME:-14400}
       - GCE_REPORT_FORMAT=${GCE_REPORT_FORMAT:-XML}
     volumes:
-      # Mount GCE socket directory
+      # Mount GCE socket directory - commenta se non usi GCE
       - gce_gvmd_socket_vol:/mnt/gce_sockets:ro
+      #- ./plugins/gce_scanner:/app
     depends_on:
       - rabbitmq
       - api_gateway
@@ -238,6 +230,7 @@ volumes:
   backend_media:
   nmap_temp_results:
   fingerprint_results:
+  # Commenta se non usi GCE
   gce_gvmd_socket_vol:
     external: true
     
