@@ -24,14 +24,30 @@ services:
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-vapter}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-vapter123}
+      # Configurazione heartbeat e timeout
+      RABBITMQ_HEARTBEAT: 60
+      RABBITMQ_CHANNEL_MAX: 200
+      RABBITMQ_FRAME_MAX: 131072
+      # Configurazione per connessioni lunghe
+      RABBITMQ_TCP_KEEPALIVE: 'true'
+      RABBITMQ_TCP_KEEPALIVE_IDLE: 60
+      RABBITMQ_TCP_KEEPALIVE_INTVL: 10
+      RABBITMQ_TCP_KEEPALIVE_CNT: 10
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
+      # Configurazione avanzata RabbitMQ
+      - ./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
     ports:
       - "5672:5672"      # AMQP port
       - "15672:15672"    # Management UI
     networks:
       - vapter_network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "rabbitmq-diagnostics -q ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
   # Django Backend Orchestrator
   backend:
