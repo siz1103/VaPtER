@@ -61,6 +61,8 @@ services:
       - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-in-production}
       - DATABASE_URL=postgresql://${POSTGRES_USER:-vapter}:${POSTGRES_PASSWORD:-vapter123}@db:5432/${POSTGRES_DB:-vapter}
       - RABBITMQ_URL=amqp://${RABBITMQ_USER:-vapter}:${RABBITMQ_PASSWORD:-vapter123}@rabbitmq:5672/
+      - RABBITMQ_USER=${RABBITMQ_USER:-guest}
+      - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD:-guest}
       - INTERNAL_API_GATEWAY_URL=http://api_gateway:8080
       - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-http://vapter.szini.it:3000,http://localhost:3000}
     volumes:
@@ -93,6 +95,8 @@ services:
       - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-in-production}
       - DATABASE_URL=postgresql://${POSTGRES_USER:-vapter}:${POSTGRES_PASSWORD:-vapter123}@db:5432/${POSTGRES_DB:-vapter}
       - RABBITMQ_URL=amqp://${RABBITMQ_USER:-vapter}:${RABBITMQ_PASSWORD:-vapter123}@rabbitmq:5672/
+      - RABBITMQ_USER=${RABBITMQ_USER:-guest}
+      - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD:-guest}
     volumes:
       - ./backend:/app
     depends_on:
@@ -135,6 +139,8 @@ services:
     environment:
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - RABBITMQ_URL=amqp://${RABBITMQ_USER:-vapter}:${RABBITMQ_PASSWORD:-vapter123}@rabbitmq:5672/
+      - RABBITMQ_USER=${RABBITMQ_USER:-guest}
+      - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD:-guest}
       - INTERNAL_API_GATEWAY_URL=http://api_gateway:8080
       - RABBITMQ_NMAP_SCAN_REQUEST_QUEUE=nmap_scan_requests
       - RABBITMQ_SCAN_STATUS_UPDATE_QUEUE=scan_status_updates
@@ -186,6 +192,8 @@ services:
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - INTERNAL_API_GATEWAY_URL=http://api_gateway:8080
       - RABBITMQ_URL=amqp://${RABBITMQ_USER:-vapter}:${RABBITMQ_PASSWORD:-vapter123}@rabbitmq:5672/
+      - RABBITMQ_USER=${RABBITMQ_USER:-guest}
+      - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD:-guest}
       - RABBITMQ_FINGERPRINT_SCAN_REQUEST_QUEUE=fingerprint_scan_requests
       - RABBITMQ_SCAN_STATUS_UPDATE_QUEUE=scan_status_updates
       - FINGERPRINT_TIMEOUT_PER_PORT=60
@@ -210,6 +218,8 @@ services:
     environment:
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - RABBITMQ_URL=amqp://${RABBITMQ_USER:-vapter}:${RABBITMQ_PASSWORD:-vapter123}@rabbitmq:5672/
+      - RABBITMQ_USER=${RABBITMQ_USER:-guest}
+      - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD:-guest}
       - INTERNAL_API_GATEWAY_URL=http://api_gateway:8080
       - RABBITMQ_GCE_SCAN_REQUEST_QUEUE=${RABBITMQ_GCE_SCAN_REQUEST_QUEUE:-gce_scan_requests}
       - RABBITMQ_SCAN_STATUS_UPDATE_QUEUE=${RABBITMQ_SCAN_STATUS_UPDATE_QUEUE:-scan_status_updates}

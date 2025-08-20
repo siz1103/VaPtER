@@ -47,7 +47,7 @@ class RabbitMQConnection:
         
         while True:
             try:
-                logger.info(f"Attempting to connect to RabbitMQ at {self.host}:{self.port} with credential {self.user},{self.pwd}")
+                logger.info(f"Attempting to connect to RabbitMQ at {self.host}:{self.port}")
                 
                 connection_params = pika.ConnectionParameters(
                     host=self.host,

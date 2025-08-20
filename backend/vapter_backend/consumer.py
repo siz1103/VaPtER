@@ -29,9 +29,12 @@ logger = logging.getLogger(__name__)
 class RabbitMQConnection:
     """Gestisce le connessioni RabbitMQ con reconnection automatica e heartbeat robusto"""
     
-    def __init__(self, host: str, port: int, queue_name: str, heartbeat: int = 60):
+    def __init__(self, host: str, port: int, user: str, pwd: str, queue_name: str, heartbeat: int = 60):
         self.host = host
         self.port = port
+        self.user = user
+        self.pwd = pwd
+        self.credentials = pika.PlainCredentials(self.user, self.pwd)
         self.queue_name = queue_name
         self.heartbeat = heartbeat
         self.connection = None
@@ -52,6 +55,7 @@ class RabbitMQConnection:
                 connection_params = pika.ConnectionParameters(
                     host=self.host,
                     port=self.port,
+                    credentials=self.credentials,
                     heartbeat=self.heartbeat,
                     blocked_connection_timeout=300,
                     connection_attempts=3,
@@ -200,11 +204,15 @@ class ScanStatusConsumer:
         # RabbitMQ configuration
         self.rabbitmq_host = os.environ.get('RABBITMQ_HOST', 'rabbitmq')
         self.rabbitmq_port = int(os.environ.get('RABBITMQ_PORT', '5672'))
-        
+        self.rabbitmq_user = os.environ.get('RABBITMQ_USER', 'guest')
+        self.rabbitmq_pass = os.environ.get('RABBITMQ_PASSWORD', 'guest')
+
         # Initialize connection
         self.connection = RabbitMQConnection(
             self.rabbitmq_host,
             self.rabbitmq_port,
+            self.rabbitmq_user,
+            self.rabbitmq_pass,
             os.environ.get('RABBITMQ_SCAN_STATUS_UPDATE_QUEUE', 'scan_status_updates'),
             heartbeat=60
         )
