@@ -112,7 +112,11 @@ class FingerprintScanner:
                 )
                 self.channel.queue_declare(
                     queue=settings.SCAN_STATUS_UPDATE_QUEUE, 
-                    durable=True
+                    durable=True,
+                                        arguments={
+                        'x-message-ttl': 3600000,  # 1 hour TTL
+                        'x-max-length': 10000
+                    }
                 )
                 
                 logger.info("Successfully connected to RabbitMQ")
