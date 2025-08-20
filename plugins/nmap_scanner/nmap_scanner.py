@@ -43,7 +43,7 @@ class RabbitMQConnection:
         
         while True:
             try:
-                logger.info(f"Attempting to connect to RabbitMQ at {self.host}:{self.port}")
+                logger.info(f"Attempting to connect to RabbitMQ at {self.rabbitmq_url}")
                 
                 # Usa URLParameters per includere automaticamente le credenziali dall'URL
                 parameters = pika.URLParameters(self.rabbitmq_url)
