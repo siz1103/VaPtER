@@ -25,8 +25,10 @@ logger = logging.getLogger(__name__)
 class RabbitMQConnection:
     """Gestisce le connessioni RabbitMQ con reconnection automatica e heartbeat robusto"""
     
-    def __init__(self, rabbitmq_url: str, queue_name: str, heartbeat: int = 60):
-        self.rabbitmq_url = rabbitmq_url
+    def __init__(self, host: str, port: int, user: str, pwd: str, queue_name: str, heartbeat: int = 60):
+        self.host = host
+        self.port = port
+        self.credentials = pika.PlainCredentials(user, pwd)
         self.queue_name = queue_name
         self.heartbeat = heartbeat
         self.connection = None
@@ -43,16 +45,19 @@ class RabbitMQConnection:
         
         while True:
             try:
-                logger.info(f"Attempting to connect to RabbitMQ at {self.rabbitmq_url}")
+                logger.info(f"Attempting to connect to RabbitMQ at {self.host}:{self.port}")
                 
-                # Usa URLParameters per includere automaticamente le credenziali dall'URL
-                parameters = pika.URLParameters(self.rabbitmq_url)
-                parameters.heartbeat=self.heartbeat,
-                parameters.blocked_connection_timeout=300,
-                parameters.connection_attempts=3,
-                parameters.retry_delay=2
+                connection_params = pika.ConnectionParameters(
+                    host=self.host,
+                    port=self.port,
+                    credentials=self.credentials,
+                    heartbeat=self.heartbeat,
+                    blocked_connection_timeout=300,
+                    connection_attempts=3,
+                    retry_delay=2
+                )
                 
-                self.connection = pika.BlockingConnection(parameters)
+                self.connection = pika.BlockingConnection(connection_params)
                 self.channel = self.connection.channel()
                 
                 # Declare queue with durability
@@ -188,18 +193,28 @@ class NmapScanner:
     def __init__(self):
         # Configuration
         self.api_gateway_url = os.environ.get('INTERNAL_API_GATEWAY_URL', 'http://api_gateway:5000')
-        self.rabbitmq_url = os.environ.get('RABBITMQ_URL', 'amqp://vapter:vapter123@rabbitmq:5672/')
+        self.rabbitmq_host = os.environ.get('RABBITMQ_HOST', 'rabbitmq')
+        self.rabbitmq_port = int(os.environ.get('RABBITMQ_PORT', '5672'))
+        self.rabbitmq_user = int(os.environ.get('RABBITMQ_USER', 'guest'))
+        self.rabbitmq_pass = int(os.environ.get('RABBITMQ_PASSWORD', 'guest'))
 
-        
         # Initialize connections
         self.consumer_connection = RabbitMQConnection(
-            self.rabbitmq_url,
+            self.rabbitmq_host,
+            self.rabbitmq_port,
+            self.rabbitmq_user,
+            self.rabbitmq_pass,
             os.environ.get('RABBITMQ_NMAP_SCAN_REQUEST_QUEUE', 'nmap_scan_requests'),
+            heartbeat=60
         )
         
         self.publisher_connection = RabbitMQConnection(
-            self.rabbitmq_url,
+            self.rabbitmq_host,
+            self.rabbitmq_port,
+            self.rabbitmq_user,
+            self.rabbitmq_pass,
             os.environ.get('RABBITMQ_SCAN_STATUS_UPDATE_QUEUE', 'scan_status_updates'),
+            heartbeat=60
         )
     
     def publish_status_update(self, scan_id: int, status: str, message: str = None):
