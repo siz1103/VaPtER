@@ -195,8 +195,8 @@ class NmapScanner:
         self.api_gateway_url = os.environ.get('INTERNAL_API_GATEWAY_URL', 'http://api_gateway:5000')
         self.rabbitmq_host = os.environ.get('RABBITMQ_HOST', 'rabbitmq')
         self.rabbitmq_port = int(os.environ.get('RABBITMQ_PORT', '5672'))
-        self.rabbitmq_user = int(os.environ.get('RABBITMQ_USER', 'guest'))
-        self.rabbitmq_pass = int(os.environ.get('RABBITMQ_PASSWORD', 'guest'))
+        self.rabbitmq_user = os.environ.get('RABBITMQ_USER', 'guest')
+        self.rabbitmq_pass = os.environ.get('RABBITMQ_PASSWORD', 'guest')
 
         # Initialize connections
         self.consumer_connection = RabbitMQConnection(
