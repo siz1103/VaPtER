@@ -25,9 +25,10 @@ logger = logging.getLogger(__name__)
 class RabbitMQConnection:
     """Gestisce le connessioni RabbitMQ con reconnection automatica e heartbeat robusto"""
     
-    def __init__(self, rabbitmq_url: str, queue_name: str):
+    def __init__(self, rabbitmq_url: str, queue_name: str, heartbeat: int = 60):
         self.rabbitmq_url = rabbitmq_url
         self.queue_name = queue_name
+        self.heartbeat = heartbeat
         self.connection = None
         self.channel = None
         self._lock = threading.Lock()
@@ -42,14 +43,14 @@ class RabbitMQConnection:
         
         while True:
             try:
-                logger.info(f"Attempting to connect to RabbitMQ using URL: {self.rabbitmq_url.replace(self.rabbitmq_url.split('@')[0].split('//')[1], '***:***')}")
+                logger.info(f"Attempting to connect to RabbitMQ at {self.host}:{self.port}")
                 
                 # Usa URLParameters per includere automaticamente le credenziali dall'URL
                 parameters = pika.URLParameters(self.rabbitmq_url)
-                parameters.heartbeat = 60
-                parameters.blocked_connection_timeout = 300
-                parameters.connection_attempts = 3
-                parameters.retry_delay = 2
+                parameters.heartbeat=self.heartbeat,
+                parameters.blocked_connection_timeout=300,
+                parameters.connection_attempts=3,
+                parameters.retry_delay=2
                 
                 self.connection = pika.BlockingConnection(parameters)
                 self.channel = self.connection.channel()
@@ -64,7 +65,7 @@ class RabbitMQConnection:
                     }
                 )
                 
-                logger.info(f"Connected to RabbitMQ successfully on queue {self.queue_name}")
+                logger.info(f"Connected to RabbitMQ successfully with heartbeat={self.heartbeat}s")
                 self._last_activity = time.time()
                 return True
                 
@@ -120,12 +121,12 @@ class RabbitMQConnection:
             except Exception as e:
                 logger.error(f"Failed to publish message (attempt {attempt + 1}/{max_retries}): {e}")
                 if attempt < max_retries - 1:
-                    time.sleep(2)
-        
+                    time.sleep(2 ** attempt)  # Exponential backoff
+                    
         return False
     
-    def consume(self, callback):
-        """Avvia il consumer con auto-reconnection"""
+    def consume(self, callback, auto_ack: bool = False):
+        """Consuma messaggi con reconnection automatica"""
         while True:
             try:
                 if not self.ensure_connection():
@@ -136,45 +137,46 @@ class RabbitMQConnection:
                 self.channel.basic_qos(prefetch_count=1)
                 
                 # Start consuming
+                logger.info(f"Consuming from queue: {self.queue_name}")
+                
                 for method, properties, body in self.channel.consume(
                     queue=self.queue_name,
-                    auto_ack=False
+                    auto_ack=auto_ack
                 ):
                     try:
-                        message = json.loads(body)
-                        logger.info(f"Received message from {self.queue_name}: {message}")
+                        self._last_activity = time.time()
+                        message = json.loads(body.decode('utf-8'))
                         
                         # Process message
                         callback(self.channel, method, properties, message)
                         
-                        # Acknowledge message only after successful processing
-                        self.channel.basic_ack(delivery_tag=method.delivery_tag)
-                        self._last_activity = time.time()
-                        
-                    except json.JSONDecodeError as e:
-                        logger.error(f"Failed to decode message: {e}")
-                        self.channel.basic_nack(
-                            delivery_tag=method.delivery_tag,
-                            requeue=False
-                        )
+                        if not auto_ack:
+                            self.channel.basic_ack(delivery_tag=method.delivery_tag)
+                            
                     except Exception as e:
-                        logger.error(f"Error processing message: {e}", exc_info=True)
-                        self.channel.basic_nack(
-                            delivery_tag=method.delivery_tag,
-                            requeue=True
-                        )
+                        logger.error(f"Error processing message: {e}")
+                        if not auto_ack:
+                            self.channel.basic_nack(
+                                delivery_tag=method.delivery_tag,
+                                requeue=True
+                            )
                         
-            except ConnectionClosedByBroker as e:
-                logger.error(f"Connection closed by broker: {e}")
+            except (AMQPConnectionError, AMQPChannelError, ConnectionClosedByBroker) as e:
+                logger.error(f"Connection error during consume: {e}")
                 time.sleep(5)
+            except KeyboardInterrupt:
+                logger.info("Shutdown requested...")
+                break
             except Exception as e:
-                logger.error(f"Consumer error: {e}")
+                logger.error(f"Unexpected error during consume: {e}", exc_info=True)
                 time.sleep(5)
     
     def close(self):
-        """Chiude la connessione"""
+        """Chiude la connessione in modo pulito"""
         with self._lock:
             try:
+                if self.channel and not self.channel.is_closed:
+                    self.channel.close()
                 if self.connection and not self.connection.is_closed:
                     self.connection.close()
                 logger.info("RabbitMQ connection closed")
@@ -185,22 +187,19 @@ class RabbitMQConnection:
 class NmapScanner:
     def __init__(self):
         # Configuration
-        self.api_gateway_url = os.environ.get('INTERNAL_API_GATEWAY_URL', 'http://api_gateway:8080')
+        self.api_gateway_url = os.environ.get('INTERNAL_API_GATEWAY_URL', 'http://api_gateway:5000')
         self.rabbitmq_url = os.environ.get('RABBITMQ_URL', 'amqp://vapter:vapter123@rabbitmq:5672/')
+
         
-        # Log configuration for debugging
-        logger.info(f"Initializing NmapScanner with API Gateway: {self.api_gateway_url}")
-        logger.info(f"RabbitMQ URL configured: {self.rabbitmq_url.replace(self.rabbitmq_url.split('@')[0].split('//')[1], '***:***')}")
-        
-        # Initialize connections using the full URL with credentials
+        # Initialize connections
         self.consumer_connection = RabbitMQConnection(
             self.rabbitmq_url,
-            os.environ.get('RABBITMQ_NMAP_SCAN_REQUEST_QUEUE', 'nmap_scan_requests')
+            os.environ.get('RABBITMQ_NMAP_SCAN_REQUEST_QUEUE', 'nmap_scan_requests'),
         )
         
         self.publisher_connection = RabbitMQConnection(
             self.rabbitmq_url,
-            os.environ.get('RABBITMQ_SCAN_STATUS_UPDATE_QUEUE', 'scan_status_updates')
+            os.environ.get('RABBITMQ_SCAN_STATUS_UPDATE_QUEUE', 'scan_status_updates'),
         )
     
     def publish_status_update(self, scan_id: int, status: str, message: str = None):
@@ -237,51 +236,48 @@ class NmapScanner:
             logger.error(f"Error getting scan parameters: {e}")
             return None
     
-    def build_nmap_command(self, target: str, scan_params: Dict[str, Any]) -> List[str]:
+    def build_nmap_command(self, target_host: str, scan_params: Dict[str, Any]) -> List[str]:
         """Costruisce il comando nmap basato sui parametri"""
-        command = ['nmap']
+        cmd = ['nmap']
         
         # Add scan type flags
-        if scan_params.get('scan_type'):
-            command.append(scan_params['scan_type'])
-        
-        # Add timing template
-        if scan_params.get('timing_template'):
-            command.append(f"-T{scan_params['timing_template']}")
-        
-        # Add port specification
-        if scan_params.get('ports'):
-            command.extend(['-p', scan_params['ports']])
-        
-        # Add script scan if requested
-        if scan_params.get('scripts'):
-            command.extend(['--script', scan_params['scripts']])
-        
-        # Add version detection
-        if scan_params.get('version_detection'):
-            command.append('-sV')
-        
-        # Add OS detection
+        if scan_params.get('syn_scan'):
+            cmd.append('-sS')
+        if scan_params.get('udp_scan'):
+            cmd.append('-sU')
+        if scan_params.get('service_version'):
+            cmd.append('-sV')
         if scan_params.get('os_detection'):
-            command.append('-O')
+            cmd.append('-O')
+        if scan_params.get('script_scan'):
+            cmd.append('-sC')
+        if scan_params.get('aggressive'):
+            cmd.append('-A')
         
-        # Add traceroute
-        if scan_params.get('traceroute'):
-            command.append('--traceroute')
+        # Timing template
+        timing = scan_params.get('timing_template', 'T3')
+        cmd.append(f'-{timing}')
         
-        # Always output XML for parsing
-        command.extend(['-oX', '-'])
+        # Port specification
+        port_spec = scan_params.get('port_specification', '-')
+        if port_spec != '-':
+            cmd.extend(['-p', port_spec])
         
-        # Add target
-        command.append(target)
+        # Output format
+        cmd.extend(['-oX', '-'])  # XML output to stdout
         
-        logger.info(f"Built nmap command: {' '.join(command)}")
-        return command
+        # Target
+        cmd.append(target_host)
+        
+        logger.info(f"Nmap command: {' '.join(cmd)}")
+        return cmd
     
     def execute_nmap_scan(self, command: List[str]) -> Optional[str]:
-        """Esegue la scansione nmap"""
+        """Esegue la scansione nmap e ritorna l'output XML"""
         try:
-            logger.info("Executing nmap scan...")
+            start_time = time.time()
+            
+            # Execute nmap
             result = subprocess.run(
                 command,
                 capture_output=True,
@@ -289,117 +285,97 @@ class NmapScanner:
                 timeout=3600  # 1 hour timeout
             )
             
+            elapsed_time = time.time() - start_time
+            
             if result.returncode == 0:
-                logger.info("Nmap scan completed successfully")
+                logger.info(f"Nmap scan completed successfully in {elapsed_time:.2f}s")
                 return result.stdout
             else:
-                logger.error(f"Nmap scan failed: {result.stderr}")
+                logger.error(f"Nmap scan failed with code {result.returncode}: {result.stderr}")
                 return None
                 
         except subprocess.TimeoutExpired:
             logger.error("Nmap scan timed out")
             return None
         except Exception as e:
-            logger.error(f"Error executing nmap scan: {e}")
+            logger.error(f"Error executing nmap: {e}")
             return None
     
     def parse_nmap_results(self, xml_output: str) -> Dict[str, Any]:
-        """Analizza i risultati XML di nmap"""
+        """Parse i risultati XML di nmap"""
         try:
             root = ET.fromstring(xml_output)
+            
             results = {
                 'hosts': [],
                 'scan_info': {},
-                'statistics': {}
+                'raw_xml': xml_output
             }
             
             # Parse scan info
-            for scaninfo in root.findall('scaninfo'):
-                results['scan_info'][scaninfo.get('protocol')] = {
+            scaninfo = root.find('scaninfo')
+            if scaninfo is not None:
+                results['scan_info'] = {
                     'type': scaninfo.get('type'),
-                    'numservices': scaninfo.get('numservices'),
+                    'protocol': scaninfo.get('protocol'),
                     'services': scaninfo.get('services')
                 }
             
             # Parse hosts
             for host in root.findall('host'):
                 host_data = {
-                    'status': host.find('status').get('state'),
-                    'addresses': [],
-                    'hostnames': [],
-                    'ports': [],
-                    'os': []
+                    'address': None,
+                    'hostname': None,
+                    'state': None,
+                    'ports': []
                 }
                 
-                # Addresses
-                for address in host.findall('address'):
-                    host_data['addresses'].append({
-                        'addr': address.get('addr'),
-                        'addrtype': address.get('addrtype')
-                    })
+                # Address
+                address = host.find('address')
+                if address is not None:
+                    host_data['address'] = address.get('addr')
                 
-                # Hostnames
+                # Hostname
                 hostnames = host.find('hostnames')
                 if hostnames is not None:
-                    for hostname in hostnames.findall('hostname'):
-                        host_data['hostnames'].append({
-                            'name': hostname.get('name'),
-                            'type': hostname.get('type')
-                        })
+                    hostname = hostnames.find('hostname')
+                    if hostname is not None:
+                        host_data['hostname'] = hostname.get('name')
+                
+                # State
+                status = host.find('status')
+                if status is not None:
+                    host_data['state'] = status.get('state')
                 
                 # Ports
                 ports = host.find('ports')
                 if ports is not None:
                     for port in ports.findall('port'):
                         port_data = {
-                            'portid': port.get('portid'),
                             'protocol': port.get('protocol'),
-                            'state': port.find('state').get('state'),
+                            'portid': port.get('portid'),
+                            'state': None,
                             'service': {}
                         }
                         
+                        # Port state
+                        state = port.find('state')
+                        if state is not None:
+                            port_data['state'] = state.get('state')
+                        
+                        # Service info
                         service = port.find('service')
                         if service is not None:
                             port_data['service'] = {
                                 'name': service.get('name'),
                                 'product': service.get('product'),
                                 'version': service.get('version'),
-                                'extrainfo': service.get('extrainfo'),
-                                'method': service.get('method'),
-                                'conf': service.get('conf')
+                                'extrainfo': service.get('extrainfo')
                             }
                         
                         host_data['ports'].append(port_data)
                 
-                # OS detection
-                os_elem = host.find('os')
-                if os_elem is not None:
-                    for osmatch in os_elem.findall('osmatch'):
-                        host_data['os'].append({
-                            'name': osmatch.get('name'),
-                            'accuracy': osmatch.get('accuracy')
-                        })
-                
                 results['hosts'].append(host_data)
-            
-            # Parse statistics
-            runstats = root.find('runstats')
-            if runstats is not None:
-                finished = runstats.find('finished')
-                if finished is not None:
-                    results['statistics'] = {
-                        'timestr': finished.get('timestr'),
-                        'elapsed': finished.get('elapsed'),
-                        'exit': finished.get('exit')
-                    }
-                
-                hosts_elem = runstats.find('hosts')
-                if hosts_elem is not None:
-                    results['statistics']['hosts'] = {
-                        'up': hosts_elem.get('up'),
-                        'down': hosts_elem.get('down'),
-                        'total': hosts_elem.get('total')
-                    }
             
             return results
             
@@ -410,13 +386,17 @@ class NmapScanner:
     def send_results_to_api(self, scan_id: int, results: Dict[str, Any]) -> bool:
         """Invia i risultati all'API Gateway"""
         try:
-            url = f"{self.api_gateway_url}/api/orchestrator/scans/{scan_id}/"
-            payload = {
-                'nmap_results': results,
-                'status': 'completed'
-            }
+            # Add metadata
+            results['nmap_scan_completed_at'] = datetime.now(timezone.utc).isoformat()
             
-            response = requests.put(url, json=payload, timeout=30)
+            # Send results
+            url = f"{self.api_gateway_url}/api/orchestrator/scans/{scan_id}/"
+            response = requests.patch(
+                url,
+                json={'nmap_results': results},
+                headers={'Content-Type': 'application/json'},
+                timeout=30
+            )
             
             if response.status_code in [200, 201]:
                 logger.info(f"Successfully sent results for scan {scan_id}")
@@ -437,10 +417,10 @@ class NmapScanner:
         
         logger.info(f"Processing scan request: scan_id={scan_id}, target={target_host}")
         
+        # Update status
+        self.publish_status_update(scan_id, 'received', 'Scan request received by Nmap module')
+        
         try:
-            # Update status
-            self.publish_status_update(scan_id, 'initializing', 'Starting nmap scan')
-            
             # Get scan parameters
             scan_params = self.get_scan_parameters(scan_type_id)
             if not scan_params:
@@ -484,7 +464,7 @@ class NmapScanner:
             logger.error("Failed to connect publisher to RabbitMQ")
             return
         
-        logger.info(f"Nmap Scanner started, waiting for messages...")
+        logger.info(f"Nmap Scanner started, waiting for messages on {self.consumer_connection.queue_name}")
         
         try:
             # Start consuming
