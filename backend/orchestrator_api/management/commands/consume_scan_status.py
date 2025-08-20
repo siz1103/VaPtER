@@ -62,8 +62,15 @@ class Command(BaseCommand):
         
         try:
             # Declare queue (in case it doesn't exist)
-            self.channel.queue_declare(queue=queue_name, durable=True)
-            
+            self.channel.queue_declare(
+                queue=queue_name,
+                durable=True,
+                arguments={
+                    'x-message-ttl': 3600000,  # 1 hour TTL
+                    'x-max-length': 10000
+                }
+            )
+    
             # Set QoS
             self.channel.basic_qos(prefetch_count=prefetch_count)
             

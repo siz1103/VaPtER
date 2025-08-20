@@ -110,10 +110,17 @@ class RabbitMQConnection:
             try:
                 if not self.ensure_connection():
                     continue
-                
+
                 # Declare target queue
-                self.channel.queue_declare(queue=routing_key, durable=True)
-                
+                self.channel.queue_declare(
+                    queue=routing_key,
+                    durable=True,
+                    arguments={
+                        'x-message-ttl': 3600000,  # 1 hour TTL
+                        'x-max-length': 10000
+                    }
+                )
+
                 self.channel.basic_publish(
                     exchange='',
                     routing_key=routing_key,

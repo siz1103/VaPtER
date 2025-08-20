@@ -45,7 +45,14 @@ class RabbitMQService:
         ]
         
         for queue in queues:
-            self.channel.queue_declare(queue=queue, durable=True)
+            self.channel.queue_declare(
+                queue=queue,
+                durable=True,
+                arguments={
+                    'x-message-ttl': 3600000,  # 1 hour TTL
+                    'x-max-length': 10000
+                }
+            )
     
     def publish_message(self, queue_name, message):
         """Publish a message to a queue"""
