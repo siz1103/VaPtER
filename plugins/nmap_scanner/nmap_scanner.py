@@ -28,7 +28,9 @@ class RabbitMQConnection:
     def __init__(self, host: str, port: int, user: str, pwd: str, queue_name: str, heartbeat: int = 60):
         self.host = host
         self.port = port
-        self.credentials = pika.PlainCredentials(user, pwd)
+        self.user = user
+        self.pwd = pwd
+        self.credentials = pika.PlainCredentials(self.user, self.pwd)
         self.queue_name = queue_name
         self.heartbeat = heartbeat
         self.connection = None
@@ -45,7 +47,7 @@ class RabbitMQConnection:
         
         while True:
             try:
-                logger.info(f"Attempting to connect to RabbitMQ at {self.host}:{self.port} with credential {self.credentials}")
+                logger.info(f"Attempting to connect to RabbitMQ at {self.host}:{self.port} with credential {self.user},{self.pwd}")
                 
                 connection_params = pika.ConnectionParameters(
                     host=self.host,
